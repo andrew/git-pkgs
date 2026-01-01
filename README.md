@@ -4,11 +4,9 @@ A git subcommand for tracking package dependencies across git history. Analyzes 
 
 ## Why this exists
 
-Your lockfile shows what dependencies you have. It doesn't show how you got here. `git log Gemfile.lock` is useless noise.
+Your lockfile shows what dependencies you have, but it doesn't show how you got here, and `git log Gemfile.lock` is useless noise. git-pkgs indexes your dependency history into a queryable database so you can ask questions like: when did we add this? who added it? what changed between these two releases? has anyone touched this in the last year?
 
-git-pkgs indexes your dependency history into a queryable database. You can ask: when did we add this? who added it? what changed between these two releases? has anyone touched this in the last year?
-
-It works across ecosystems. Gemfile, package.json, Dockerfile, GitHub Actions workflows - one unified history instead of separate tools per ecosystem.
+It works across many ecosystems (Gemfile, package.json, Dockerfile, GitHub Actions workflows) giving you one unified history instead of separate tools per ecosystem. Everything runs locally and offline with no external services or network calls, and the database lives in your `.git` directory where you can use it in CI to catch dependency changes in pull requests.
 
 ## Installation
 
@@ -211,7 +209,7 @@ Manifest Files
 git pkgs why rails
 ```
 
-Shows the commit that added the dependency with author and message.
+This shows the commit that added the dependency along with the author and message.
 
 ### Dependency tree
 
@@ -220,7 +218,7 @@ git pkgs tree
 git pkgs tree --ecosystem=rubygems
 ```
 
-Shows dependencies grouped by type (runtime, development, etc).
+This shows dependencies grouped by type (runtime, development, etc).
 
 ### Diff between commits
 
@@ -229,18 +227,45 @@ git pkgs diff --from=abc123 --to=def456
 git pkgs diff --from=HEAD~10
 ```
 
-Shows added, removed, and modified packages with version info.
+This shows added, removed, and modified packages with version info.
 
 ### Keep database updated
+
+After the initial analysis, you can incrementally update the database with new commits:
 
 ```bash
 git pkgs update
 ```
 
-Or install git hooks to update automatically after commits and merges:
+You can also install git hooks to update automatically after commits and merges:
 
 ```bash
 git pkgs hooks --install
+```
+
+### CI usage
+
+You can run git-pkgs in CI to show dependency changes in pull requests:
+
+```yaml
+# .github/workflows/deps.yml
+name: Dependencies
+
+on: pull_request
+
+jobs:
+  diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - run: gem install git-pkgs
+      - run: git pkgs init
+      - run: git pkgs diff --from=origin/${{ github.base_ref }} --to=HEAD
 ```
 
 ## Performance

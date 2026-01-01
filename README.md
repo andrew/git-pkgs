@@ -20,10 +20,14 @@ gem install git-pkgs
 
 ```bash
 cd your-repo
-git pkgs init    # analyze history (one-time, ~300 commits/sec)
-git pkgs stats   # see overview
-git pkgs blame   # who added each dependency
-git pkgs history rails  # track a package over time
+git pkgs init           # analyze history (one-time, ~300 commits/sec)
+git pkgs list           # show current dependencies
+git pkgs stats          # see overview
+git pkgs blame          # who added each dependency
+git pkgs history        # all dependency changes over time
+git pkgs history rails  # track a specific package
+git pkgs why rails      # why was this added?
+git pkgs diff --from=HEAD~10  # what changed recently?
 ```
 
 ## Commands

@@ -570,3 +570,133 @@ class Git::Pkgs::TestStatsCommand < Minitest::Test
     $stdout = original
   end
 end
+
+class Git::Pkgs::TestLogCommand < Minitest::Test
+  include TestHelpers
+
+  def setup
+    create_test_repo
+    add_file("Gemfile", "source 'https://rubygems.org'\ngem 'rails'")
+    commit("Add rails")
+    @git_dir = File.join(@test_dir, ".git")
+    Git::Pkgs::Database.connect(@git_dir)
+    Git::Pkgs::Database.create_schema
+  end
+
+  def teardown
+    cleanup_test_repo
+  end
+
+  def test_log_shows_commits_with_changes
+    create_commit_with_changes("First commit", [
+      { name: "rails", change_type: "added" }
+    ])
+    create_commit_with_changes("Second commit", [
+      { name: "puma", change_type: "added" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Log.new([]).run
+      end
+    end
+
+    assert_includes output, "First commit"
+    assert_includes output, "Second commit"
+    assert_includes output, "+ rails"
+    assert_includes output, "+ puma"
+  end
+
+  def test_log_filters_by_author
+    create_commit_with_changes("Alice commit", [
+      { name: "rails", change_type: "added" }
+    ], author_name: "alice")
+    create_commit_with_changes("Bob commit", [
+      { name: "puma", change_type: "added" }
+    ], author_name: "bob")
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Log.new(["--author=alice"]).run
+      end
+    end
+
+    assert_includes output, "Alice commit"
+    refute_includes output, "Bob commit"
+  end
+
+  def test_log_respects_limit
+    3.times do |i|
+      create_commit_with_changes("Commit #{i}", [
+        { name: "gem#{i}", change_type: "added" }
+      ])
+    end
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Log.new(["-n", "2"]).run
+      end
+    end
+
+    # Should only show 2 commits
+    assert_equal 2, output.scan(/^[a-f0-9]{7} Commit/).length
+  end
+
+  def test_log_json_format
+    create_commit_with_changes("Test commit", [
+      { name: "rails", change_type: "added" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Log.new(["--format=json"]).run
+      end
+    end
+
+    data = JSON.parse(output)
+    assert_equal 1, data.length
+    assert_equal "Test commit", data.first["message"]
+    assert_equal 1, data.first["changes"].length
+  end
+
+  def create_commit_with_changes(message, changes, author_name: "Test User", author_email: "test@example.com")
+    sha = SecureRandom.hex(20)
+    commit = Git::Pkgs::Models::Commit.create!(
+      sha: sha,
+      message: message,
+      author_name: author_name,
+      author_email: author_email,
+      committed_at: Time.now,
+      has_dependency_changes: true
+    )
+
+    manifest = Git::Pkgs::Models::Manifest.find_or_create_by!(
+      path: "Gemfile",
+      ecosystem: "rubygems",
+      kind: "manifest"
+    )
+
+    changes.each do |change|
+      Git::Pkgs::Models::DependencyChange.create!(
+        commit: commit,
+        manifest: manifest,
+        name: change[:name],
+        change_type: change[:change_type],
+        requirement: ">= 0",
+        ecosystem: "rubygems",
+        dependency_type: "runtime"
+      )
+    end
+
+    commit
+  end
+
+  def capture_stdout
+    original = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = original
+  end
+end

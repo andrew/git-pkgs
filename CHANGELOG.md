@@ -3,6 +3,7 @@
 ## [0.2.0] - 2026-01-02
 
 - `git pkgs show` command to display dependency changes in a single commit
+- `git pkgs log` command to list commits with dependency changes
 - `git pkgs history` now supports `--author`, `--since`, and `--until` filters
 - `git pkgs stats --by-author` shows who added the most dependencies
 - `git pkgs stats --ecosystem=X` filters statistics by ecosystem

@@ -244,6 +244,16 @@ git pkgs show HEAD~5       # relative ref
 
 Like `git show` but for dependencies. Shows what was added, modified, or removed in a single commit.
 
+### List commits with dependency changes
+
+```bash
+git pkgs log                  # recent commits with dependency changes
+git pkgs log --author=alice   # filter by author
+git pkgs log -n 50            # show more commits
+```
+
+Like `git log` but only shows commits that changed dependencies, with the changes listed under each commit.
+
 ### Keep database updated
 
 After the initial analysis, you can incrementally update the database with new commits:

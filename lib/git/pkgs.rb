@@ -28,6 +28,7 @@ require_relative "pkgs/commands/tree"
 require_relative "pkgs/commands/branch"
 require_relative "pkgs/commands/search"
 require_relative "pkgs/commands/show"
+require_relative "pkgs/commands/log"
 
 module Git
   module Pkgs

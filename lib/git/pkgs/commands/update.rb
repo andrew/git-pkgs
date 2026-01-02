@@ -57,60 +57,62 @@ module Git
           puts "Updating branch: #{branch_name}"
           puts "Found #{total} new commits"
 
-          commits.each do |rugged_commit|
-            processed += 1
-            print "\rProcessing commit #{processed}/#{total}..."
+          ActiveRecord::Base.transaction do
+            commits.each do |rugged_commit|
+              processed += 1
+              print "\rProcessing commit #{processed}/#{total}..."
 
-            result = analyzer.analyze_commit(rugged_commit, snapshot)
+              result = analyzer.analyze_commit(rugged_commit, snapshot)
 
-            commit = Models::Commit.find_or_create_from_rugged(rugged_commit)
-            Models::BranchCommit.find_or_create_by(
-              branch: branch,
-              commit: commit,
-              position: last_position + processed
-            )
+              commit = Models::Commit.find_or_create_from_rugged(rugged_commit)
+              Models::BranchCommit.find_or_create_by(
+                branch: branch,
+                commit: commit,
+                position: last_position + processed
+              )
 
-            if result && result[:changes].any?
-              dependency_commits += 1
-              commit.update(has_dependency_changes: true)
+              if result && result[:changes].any?
+                dependency_commits += 1
+                commit.update(has_dependency_changes: true)
 
-              result[:changes].each do |change|
-                manifest = Models::Manifest.find_or_create(
-                  path: change[:manifest_path],
-                  ecosystem: change[:ecosystem],
-                  kind: change[:kind]
-                )
+                result[:changes].each do |change|
+                  manifest = Models::Manifest.find_or_create(
+                    path: change[:manifest_path],
+                    ecosystem: change[:ecosystem],
+                    kind: change[:kind]
+                  )
 
-                Models::DependencyChange.create!(
-                  commit: commit,
-                  manifest: manifest,
-                  name: change[:name],
-                  ecosystem: change[:ecosystem],
-                  change_type: change[:change_type],
-                  requirement: change[:requirement],
-                  previous_requirement: change[:previous_requirement],
-                  dependency_type: change[:dependency_type]
-                )
-              end
+                  Models::DependencyChange.create!(
+                    commit: commit,
+                    manifest: manifest,
+                    name: change[:name],
+                    ecosystem: change[:ecosystem],
+                    change_type: change[:change_type],
+                    requirement: change[:requirement],
+                    previous_requirement: change[:previous_requirement],
+                    dependency_type: change[:dependency_type]
+                  )
+                end
 
-              snapshot = result[:snapshot]
+                snapshot = result[:snapshot]
 
-              snapshot.each do |(manifest_path, name), dep_info|
-                manifest = Models::Manifest.find_by(path: manifest_path)
-                Models::DependencySnapshot.find_or_create_by(
-                  commit: commit,
-                  manifest: manifest,
-                  name: name
-                ) do |s|
-                  s.ecosystem = dep_info[:ecosystem]
-                  s.requirement = dep_info[:requirement]
-                  s.dependency_type = dep_info[:dependency_type]
+                snapshot.each do |(manifest_path, name), dep_info|
+                  manifest = Models::Manifest.find_by(path: manifest_path)
+                  Models::DependencySnapshot.find_or_create_by(
+                    commit: commit,
+                    manifest: manifest,
+                    name: name
+                  ) do |s|
+                    s.ecosystem = dep_info[:ecosystem]
+                    s.requirement = dep_info[:requirement]
+                    s.dependency_type = dep_info[:dependency_type]
+                  end
                 end
               end
             end
-          end
 
-          branch.update(last_analyzed_sha: current_sha)
+            branch.update(last_analyzed_sha: current_sha)
+          end
 
           puts "\nDone!"
           puts "Processed #{total} new commits"

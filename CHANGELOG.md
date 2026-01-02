@@ -2,6 +2,7 @@
 
 - `git pkgs stats` now supports `--since` and `--until` date filters
 - Consistent error handling across all commands (JSON errors when `--format=json`)
+- `git pkgs update` now uses a transaction for atomicity and better performance
 - Renamed `git pkgs outdated` to `git pkgs stale` (outdated remains as alias)
 - `git pkgs log` command to list commits with dependency changes
 - `git pkgs schema` command to output database schema in text, SQL, JSON, or markdown

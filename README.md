@@ -296,6 +296,21 @@ The database schema stores:
 
 See [docs/schema.md](docs/schema.md) for full schema documentation.
 
+Since the database is just SQLite, you can query it directly for ad-hoc analysis:
+
+```bash
+sqlite3 .git/pkgs.sqlite3 "
+  -- who added the most dependencies?
+  SELECT c.author_name, COUNT(*) as deps_added
+  FROM dependency_changes dc
+  JOIN commits c ON dc.commit_id = c.id
+  WHERE dc.change_type = 'added'
+  GROUP BY c.author_name
+  ORDER BY deps_added DESC
+  LIMIT 10;
+"
+```
+
 ## Development
 
 ```bash

@@ -3,7 +3,7 @@
 module Git
   module Pkgs
     module Commands
-      class Outdated
+      class Stale
         def initialize(args)
           @args = args
           @options = parse_options
@@ -93,7 +93,7 @@ module Git
           options = {}
 
           parser = OptionParser.new do |opts|
-            opts.banner = "Usage: git pkgs outdated [options]"
+            opts.banner = "Usage: git pkgs stale [options]"
 
             opts.on("-e", "--ecosystem=NAME", "Filter by ecosystem") do |v|
               options[:ecosystem] = v

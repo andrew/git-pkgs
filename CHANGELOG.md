@@ -1,7 +1,6 @@
 ## [Unreleased]
 
-## [0.3.0] - 2026-01-02
-
+- Renamed `git pkgs outdated` to `git pkgs stale` (outdated remains as alias)
 - `git pkgs log` command to list commits with dependency changes
 - `git pkgs schema` command to output database schema in text, SQL, JSON, or markdown
 - `git pkgs praise` alias for `blame`

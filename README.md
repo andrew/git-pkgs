@@ -226,6 +226,17 @@ git pkgs tree --ecosystem=rubygems
 
 This shows dependencies grouped by type (runtime, development, etc).
 
+### Find stale dependencies
+
+```bash
+git pkgs stale                  # list deps by how long since last touched
+git pkgs stale --days=365       # only show deps untouched for a year
+git pkgs stale --ecosystem=npm  # filter by ecosystem
+git pkgs outdated               # alias for stale
+```
+
+Shows dependencies sorted by how long since they were last changed in your repo. Useful for finding packages that may have been forgotten or need review.
+
 ### Diff between commits
 
 ```bash

@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 - `git pkgs show` command to display dependency changes in a single commit
+- `git pkgs history` now supports `--author`, `--since`, and `--until` filters
 
 ## [0.1.1] - 2026-01-01
 

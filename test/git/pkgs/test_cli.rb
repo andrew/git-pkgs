@@ -253,3 +253,187 @@ class Git::Pkgs::TestShowCommand < Minitest::Test
     $stdout = original
   end
 end
+
+class Git::Pkgs::TestHistoryCommand < Minitest::Test
+  include TestHelpers
+
+  def setup
+    create_test_repo
+    add_file("Gemfile", "source 'https://rubygems.org'\ngem 'rails'")
+    commit("Add rails")
+    @git_dir = File.join(@test_dir, ".git")
+    Git::Pkgs::Database.connect(@git_dir)
+    Git::Pkgs::Database.create_schema
+  end
+
+  def teardown
+    cleanup_test_repo
+  end
+
+  def test_history_filters_by_author
+    create_commit_with_author("alice", "alice@example.com", [
+      { name: "rails", change_type: "added", requirement: ">= 0" }
+    ])
+    create_commit_with_author("bob", "bob@example.com", [
+      { name: "puma", change_type: "added", requirement: ">= 0" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::History.new(["--author=alice"]).run
+      end
+    end
+
+    assert_includes output, "rails"
+    refute_includes output, "puma"
+  end
+
+  def test_history_filters_by_author_email
+    create_commit_with_author("alice", "alice@example.com", [
+      { name: "rails", change_type: "added", requirement: ">= 0" }
+    ])
+    create_commit_with_author("bob", "bob@example.com", [
+      { name: "puma", change_type: "added", requirement: ">= 0" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::History.new(["--author=bob@example"]).run
+      end
+    end
+
+    refute_includes output, "rails"
+    assert_includes output, "puma"
+  end
+
+  def test_history_filters_by_since
+    create_commit_at(Time.new(2024, 1, 1), [
+      { name: "rails", change_type: "added", requirement: ">= 0" }
+    ])
+    create_commit_at(Time.new(2024, 6, 1), [
+      { name: "puma", change_type: "added", requirement: ">= 0" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::History.new(["--since=2024-03-01"]).run
+      end
+    end
+
+    refute_includes output, "rails"
+    assert_includes output, "puma"
+  end
+
+  def test_history_filters_by_until
+    create_commit_at(Time.new(2024, 1, 1), [
+      { name: "rails", change_type: "added", requirement: ">= 0" }
+    ])
+    create_commit_at(Time.new(2024, 6, 1), [
+      { name: "puma", change_type: "added", requirement: ">= 0" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::History.new(["--until=2024-03-01"]).run
+      end
+    end
+
+    assert_includes output, "rails"
+    refute_includes output, "puma"
+  end
+
+  def test_history_filters_by_date_range
+    create_commit_at(Time.new(2024, 1, 1), [
+      { name: "rails", change_type: "added", requirement: ">= 0" }
+    ])
+    create_commit_at(Time.new(2024, 6, 1), [
+      { name: "puma", change_type: "added", requirement: ">= 0" }
+    ])
+    create_commit_at(Time.new(2024, 12, 1), [
+      { name: "sidekiq", change_type: "added", requirement: ">= 0" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::History.new(["--since=2024-03-01", "--until=2024-09-01"]).run
+      end
+    end
+
+    refute_includes output, "rails"
+    assert_includes output, "puma"
+    refute_includes output, "sidekiq"
+  end
+
+  def create_commit_with_author(name, email, changes)
+    sha = SecureRandom.hex(20)
+    commit = Git::Pkgs::Models::Commit.create!(
+      sha: sha,
+      message: "Test commit",
+      author_name: name,
+      author_email: email,
+      committed_at: Time.now,
+      has_dependency_changes: true
+    )
+
+    manifest = Git::Pkgs::Models::Manifest.find_or_create_by!(
+      path: "Gemfile",
+      ecosystem: "rubygems",
+      kind: "manifest"
+    )
+
+    changes.each do |change|
+      Git::Pkgs::Models::DependencyChange.create!(
+        commit: commit,
+        manifest: manifest,
+        name: change[:name],
+        change_type: change[:change_type],
+        requirement: change[:requirement],
+        ecosystem: "rubygems",
+        dependency_type: "runtime"
+      )
+    end
+
+    commit
+  end
+
+  def create_commit_at(time, changes)
+    sha = SecureRandom.hex(20)
+    commit = Git::Pkgs::Models::Commit.create!(
+      sha: sha,
+      message: "Test commit",
+      author_name: "Test User",
+      author_email: "test@example.com",
+      committed_at: time,
+      has_dependency_changes: true
+    )
+
+    manifest = Git::Pkgs::Models::Manifest.find_or_create_by!(
+      path: "Gemfile",
+      ecosystem: "rubygems",
+      kind: "manifest"
+    )
+
+    changes.each do |change|
+      Git::Pkgs::Models::DependencyChange.create!(
+        commit: commit,
+        manifest: manifest,
+        name: change[:name],
+        change_type: change[:change_type],
+        requirement: change[:requirement],
+        ecosystem: "rubygems",
+        dependency_type: "runtime"
+      )
+    end
+
+    commit
+  end
+
+  def capture_stdout
+    original = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = original
+  end
+end

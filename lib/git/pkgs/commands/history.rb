@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "time"
+
 module Git
   module Pkgs
     module Commands
@@ -29,6 +31,24 @@ module Git
 
           if @options[:ecosystem]
             changes = changes.for_platform(@options[:ecosystem])
+          end
+
+          if @options[:author]
+            author = @options[:author]
+            changes = changes.joins(:commit).where(
+              "commits.author_name LIKE ? OR commits.author_email LIKE ?",
+              "%#{author}%", "%#{author}%"
+            )
+          end
+
+          if @options[:since]
+            since_time = parse_time(@options[:since])
+            changes = changes.joins(:commit).where("commits.committed_at >= ?", since_time)
+          end
+
+          if @options[:until]
+            until_time = parse_time(@options[:until])
+            changes = changes.joins(:commit).where("commits.committed_at <= ?", until_time)
           end
 
           if changes.empty?
@@ -118,6 +138,18 @@ module Git
               options[:format] = v
             end
 
+            opts.on("--author=NAME", "Filter by author name or email") do |v|
+              options[:author] = v
+            end
+
+            opts.on("--since=DATE", "Show changes after date (YYYY-MM-DD)") do |v|
+              options[:since] = v
+            end
+
+            opts.on("--until=DATE", "Show changes before date (YYYY-MM-DD)") do |v|
+              options[:until] = v
+            end
+
             opts.on("-h", "--help", "Show this help") do
               puts opts
               exit
@@ -126,6 +158,13 @@ module Git
 
           parser.parse!(@args)
           options
+        end
+
+        def parse_time(str)
+          Time.parse(str)
+        rescue ArgumentError
+          $stderr.puts "Invalid date format: #{str}"
+          exit 1
         end
       end
     end

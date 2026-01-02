@@ -111,8 +111,11 @@ Gemfile (rubygems):
 ### View dependency history
 
 ```bash
-git pkgs history          # all dependency changes
-git pkgs history rails    # changes for a specific package
+git pkgs history                       # all dependency changes
+git pkgs history rails                 # changes for a specific package
+git pkgs history --author=alice        # filter by author
+git pkgs history --since=2024-01-01    # changes after date
+git pkgs history --ecosystem=rubygems  # filter by ecosystem
 ```
 
 Shows when packages were added, updated, or removed:

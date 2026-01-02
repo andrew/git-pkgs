@@ -7,6 +7,7 @@
 - `git pkgs history` now supports `--author`, `--since`, and `--until` filters
 - `git pkgs stats --by-author` shows who added the most dependencies
 - `git pkgs stats --ecosystem=X` filters statistics by ecosystem
+- `git pkgs praise` alias for `blame`
 
 ## [0.1.1] - 2026-01-01
 

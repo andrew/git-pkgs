@@ -146,6 +146,7 @@ Show who added each current dependency:
 ```bash
 git pkgs blame
 git pkgs blame --ecosystem=rubygems
+git pkgs praise  # alias for blame
 ```
 
 Example output:

@@ -6,6 +6,7 @@ module Git
   module Pkgs
     class CLI
       COMMANDS = %w[init update hooks info list tree history search why blame outdated stats diff branch show log].freeze
+      ALIASES = { "praise" => "blame" }.freeze
 
       def self.run(args)
         new(args).run
@@ -24,7 +25,7 @@ module Git
           print_help
         when "-v", "--version", "version"
           puts "git-pkgs #{Git::Pkgs::VERSION}"
-        when *COMMANDS
+        when *COMMANDS, *ALIASES.keys
           run_command(command)
         else
           $stderr.puts "Unknown command: #{command}"
@@ -34,6 +35,7 @@ module Git
       end
 
       def run_command(command)
+        command = ALIASES.fetch(command, command)
         command_class = Commands.const_get(command.capitalize.gsub(/_([a-z])/) { $1.upcase })
         command_class.new(@args).run
       rescue NameError

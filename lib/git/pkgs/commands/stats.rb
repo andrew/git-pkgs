@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "time"
+
 module Git
   module Pkgs
     module Commands
@@ -38,12 +40,20 @@ module Git
 
         def collect_stats(branch, branch_name)
           ecosystem = @options[:ecosystem]
+          since_time = @options[:since] ? parse_time(@options[:since]) : nil
+          until_time = @options[:until] ? parse_time(@options[:until]) : nil
+
+          commits = branch&.commits || Models::Commit.none
+          commits = commits.where("committed_at >= ?", since_time) if since_time
+          commits = commits.where("committed_at <= ?", until_time) if until_time
 
           data = {
             branch: branch_name,
             ecosystem: ecosystem,
-            commits_analyzed: branch&.commits&.count || 0,
-            commits_with_changes: branch&.commits&.where(has_dependency_changes: true)&.count || 0,
+            since: @options[:since],
+            until: @options[:until],
+            commits_analyzed: commits.count,
+            commits_with_changes: commits.where(has_dependency_changes: true).count,
             current_dependencies: {},
             changes: {},
             most_changed: [],
@@ -62,8 +72,10 @@ module Git
             }
           end
 
-          changes = Models::DependencyChange.all
+          changes = Models::DependencyChange.joins(:commit)
           changes = changes.where(ecosystem: ecosystem) if ecosystem
+          changes = changes.where("commits.committed_at >= ?", since_time) if since_time
+          changes = changes.where("commits.committed_at <= ?", until_time) if until_time
 
           data[:changes] = {
             total: changes.count,
@@ -84,7 +96,10 @@ module Git
           manifests = manifests.where(ecosystem: ecosystem) if ecosystem
 
           data[:manifests] = manifests.map do |manifest|
-            { path: manifest.path, ecosystem: manifest.ecosystem, changes: manifest.dependency_changes.count }
+            manifest_changes = manifest.dependency_changes.joins(:commit)
+            manifest_changes = manifest_changes.where("commits.committed_at >= ?", since_time) if since_time
+            manifest_changes = manifest_changes.where("commits.committed_at <= ?", until_time) if until_time
+            { path: manifest.path, ecosystem: manifest.ecosystem, changes: manifest_changes.count }
           end
 
           data
@@ -97,6 +112,8 @@ module Git
 
           puts "Branch: #{data[:branch]}"
           puts "Ecosystem: #{data[:ecosystem]}" if data[:ecosystem]
+          puts "Since: #{data[:since]}" if data[:since]
+          puts "Until: #{data[:until]}" if data[:until]
           puts "Commits analyzed: #{data[:commits_analyzed]}"
           puts "Commits with changes: #{data[:commits_with_changes]}"
           puts
@@ -144,11 +161,16 @@ module Git
         end
 
         def output_by_author
+          since_time = @options[:since] ? parse_time(@options[:since]) : nil
+          until_time = @options[:until] ? parse_time(@options[:until]) : nil
+
           changes = Models::DependencyChange
             .joins(:commit)
             .where(change_type: "added")
 
           changes = changes.where(ecosystem: @options[:ecosystem]) if @options[:ecosystem]
+          changes = changes.where("commits.committed_at >= ?", since_time) if since_time
+          changes = changes.where("commits.committed_at <= ?", until_time) if until_time
 
           counts = changes
             .group("commits.author_name")
@@ -175,6 +197,13 @@ module Git
           end
         end
 
+        def parse_time(str)
+          Time.parse(str)
+        rescue ArgumentError
+          $stderr.puts "Invalid date format: #{str}"
+          exit 1
+        end
+
         def parse_options
           options = {}
 
@@ -191,6 +220,14 @@ module Git
 
             opts.on("-f", "--format=FORMAT", "Output format (text, json)") do |v|
               options[:format] = v
+            end
+
+            opts.on("--since=DATE", "Show changes after date") do |v|
+              options[:since] = v
+            end
+
+            opts.on("--until=DATE", "Show changes before date") do |v|
+              options[:until] = v
             end
 
             opts.on("--by-author", "Show dependencies added by author") do

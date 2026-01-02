@@ -168,8 +168,10 @@ Gemfile (rubygems):
 
 ```bash
 git pkgs stats
-git pkgs stats --by-author       # who added the most dependencies
-git pkgs stats --ecosystem=npm   # filter by ecosystem
+git pkgs stats --by-author         # who added the most dependencies
+git pkgs stats --ecosystem=npm     # filter by ecosystem
+git pkgs stats --since=2024-01-01  # changes after date
+git pkgs stats --until=2024-12-31  # changes before date
 ```
 
 Example output:

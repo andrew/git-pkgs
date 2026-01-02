@@ -1,5 +1,6 @@
 ## [Unreleased]
 
+- `git pkgs stats` now supports `--since` and `--until` date filters
 - Renamed `git pkgs outdated` to `git pkgs stale` (outdated remains as alias)
 - `git pkgs log` command to list commits with dependency changes
 - `git pkgs schema` command to output database schema in text, SQL, JSON, or markdown

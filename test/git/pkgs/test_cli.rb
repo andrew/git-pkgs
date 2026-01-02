@@ -529,14 +529,58 @@ class Git::Pkgs::TestStatsCommand < Minitest::Test
     assert_equal 2, lines.length
   end
 
-  def create_commit_with_author(name, email, changes)
+  def test_stats_by_author_respects_since_filter
+    old_time = Time.now - (30 * 24 * 60 * 60)  # 30 days ago
+    recent_time = Time.now - (5 * 24 * 60 * 60)  # 5 days ago
+
+    create_commit_with_author("alice", "alice@example.com", [
+      { name: "rails", change_type: "added" }
+    ], committed_at: old_time)
+    create_commit_with_author("bob", "bob@example.com", [
+      { name: "puma", change_type: "added" }
+    ], committed_at: recent_time)
+
+    since_date = (Time.now - (10 * 24 * 60 * 60)).strftime("%Y-%m-%d")  # 10 days ago
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Stats.new(["--by-author", "--since=#{since_date}"]).run
+      end
+    end
+
+    assert_includes output, "bob"
+    refute_includes output, "alice"
+  end
+
+  def test_stats_by_author_respects_until_filter
+    old_time = Time.now - (30 * 24 * 60 * 60)  # 30 days ago
+    recent_time = Time.now - (5 * 24 * 60 * 60)  # 5 days ago
+
+    create_commit_with_author("alice", "alice@example.com", [
+      { name: "rails", change_type: "added" }
+    ], committed_at: old_time)
+    create_commit_with_author("bob", "bob@example.com", [
+      { name: "puma", change_type: "added" }
+    ], committed_at: recent_time)
+
+    until_date = (Time.now - (10 * 24 * 60 * 60)).strftime("%Y-%m-%d")  # 10 days ago
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Stats.new(["--by-author", "--until=#{until_date}"]).run
+      end
+    end
+
+    assert_includes output, "alice"
+    refute_includes output, "bob"
+  end
+
+  def create_commit_with_author(name, email, changes, committed_at: Time.now)
     sha = SecureRandom.hex(20)
     commit = Git::Pkgs::Models::Commit.create!(
       sha: sha,
       message: "Test commit",
       author_name: name,
       author_email: email,
-      committed_at: Time.now,
+      committed_at: committed_at,
       has_dependency_changes: true
     )
 

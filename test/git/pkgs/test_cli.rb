@@ -437,3 +437,136 @@ class Git::Pkgs::TestHistoryCommand < Minitest::Test
     $stdout = original
   end
 end
+
+class Git::Pkgs::TestStatsCommand < Minitest::Test
+  include TestHelpers
+
+  def setup
+    create_test_repo
+    add_file("Gemfile", "source 'https://rubygems.org'\ngem 'rails'")
+    commit("Add rails")
+    @git_dir = File.join(@test_dir, ".git")
+    Git::Pkgs::Database.connect(@git_dir)
+    Git::Pkgs::Database.create_schema
+  end
+
+  def teardown
+    cleanup_test_repo
+  end
+
+  def test_stats_by_author_shows_counts
+    create_commit_with_author("alice", "alice@example.com", [
+      { name: "rails", change_type: "added" },
+      { name: "puma", change_type: "added" }
+    ])
+    create_commit_with_author("bob", "bob@example.com", [
+      { name: "sidekiq", change_type: "added" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Stats.new(["--by-author"]).run
+      end
+    end
+
+    assert_includes output, "alice"
+    assert_includes output, "bob"
+    assert_includes output, "2"  # alice's count
+  end
+
+  def test_stats_by_author_only_counts_added
+    create_commit_with_author("alice", "alice@example.com", [
+      { name: "rails", change_type: "added" },
+      { name: "puma", change_type: "modified" },
+      { name: "sidekiq", change_type: "removed" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Stats.new(["--by-author"]).run
+      end
+    end
+
+    assert_includes output, "alice"
+    assert_includes output, "1"  # only the added one
+  end
+
+  def test_stats_by_author_json_format
+    create_commit_with_author("alice", "alice@example.com", [
+      { name: "rails", change_type: "added" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Stats.new(["--by-author", "--format=json"]).run
+      end
+    end
+
+    data = JSON.parse(output)
+    assert_equal 1, data.length
+    assert_equal "alice", data.first["author"]
+    assert_equal 1, data.first["added"]
+  end
+
+  def test_stats_by_author_respects_limit
+    create_commit_with_author("alice", "alice@example.com", [
+      { name: "rails", change_type: "added" }
+    ])
+    create_commit_with_author("bob", "bob@example.com", [
+      { name: "puma", change_type: "added" }
+    ])
+    create_commit_with_author("charlie", "charlie@example.com", [
+      { name: "sidekiq", change_type: "added" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Stats.new(["--by-author", "-n", "2"]).run
+      end
+    end
+
+    lines = output.lines.select { |l| l.match?(/^\s+\d+\s+\w/) }
+    assert_equal 2, lines.length
+  end
+
+  def create_commit_with_author(name, email, changes)
+    sha = SecureRandom.hex(20)
+    commit = Git::Pkgs::Models::Commit.create!(
+      sha: sha,
+      message: "Test commit",
+      author_name: name,
+      author_email: email,
+      committed_at: Time.now,
+      has_dependency_changes: true
+    )
+
+    manifest = Git::Pkgs::Models::Manifest.find_or_create_by!(
+      path: "Gemfile",
+      ecosystem: "rubygems",
+      kind: "manifest"
+    )
+
+    changes.each do |change|
+      Git::Pkgs::Models::DependencyChange.create!(
+        commit: commit,
+        manifest: manifest,
+        name: change[:name],
+        change_type: change[:change_type],
+        requirement: ">= 0",
+        ecosystem: "rubygems",
+        dependency_type: "runtime"
+      )
+    end
+
+    commit
+  end
+
+  def capture_stdout
+    original = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = original
+  end
+end

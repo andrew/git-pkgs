@@ -167,6 +167,7 @@ Gemfile (rubygems):
 
 ```bash
 git pkgs stats
+git pkgs stats --by-author  # who added the most dependencies
 ```
 
 Example output:

@@ -22,13 +22,17 @@ module Git
           branch_name = @options[:branch] || repo.default_branch
           branch = Models::Branch.find_by(name: branch_name)
 
-          data = collect_stats(branch, branch_name)
-
-          if @options[:format] == "json"
-            require "json"
-            puts JSON.pretty_generate(data)
+          if @options[:by_author]
+            output_by_author
           else
-            output_text(data)
+            data = collect_stats(branch, branch_name)
+
+            if @options[:format] == "json"
+              require "json"
+              puts JSON.pretty_generate(data)
+            else
+              output_text(data)
+            end
           end
         end
 
@@ -128,6 +132,34 @@ module Git
           end
         end
 
+        def output_by_author
+          counts = Models::DependencyChange
+            .joins(:commit)
+            .where(change_type: "added")
+            .group("commits.author_name")
+            .order("count_all DESC")
+            .limit(@options[:limit] || 20)
+            .count
+
+          if counts.empty?
+            puts "No dependency additions found"
+            return
+          end
+
+          if @options[:format] == "json"
+            require "json"
+            data = counts.map { |name, count| { author: name, added: count } }
+            puts JSON.pretty_generate(data)
+          else
+            puts "Dependencies Added by Author"
+            puts "=" * 40
+            puts
+            counts.each do |name, count|
+              puts "  #{count.to_s.rjust(4)}  #{name}"
+            end
+          end
+        end
+
         def parse_options
           options = {}
 
@@ -140,6 +172,14 @@ module Git
 
             opts.on("-f", "--format=FORMAT", "Output format (text, json)") do |v|
               options[:format] = v
+            end
+
+            opts.on("--by-author", "Show dependencies added by author") do
+              options[:by_author] = true
+            end
+
+            opts.on("-n", "--limit=N", Integer, "Limit results (default: 20)") do |v|
+              options[:limit] = v
             end
 
             opts.on("-h", "--help", "Show this help") do

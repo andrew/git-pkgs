@@ -37,7 +37,7 @@ git pkgs diff --from=main --to=feature  # compare branches
 git pkgs init
 ```
 
-Walks through git history and builds a SQLite database of dependency changes, stored in `.git/pkgs.sqlite3`.
+Walks through git history and builds a SQLite database of dependency changes, stored in `.git/pkgs.sqlite3`. Set `GIT_PKGS_DB` environment variable to use a custom location.
 
 Options:
 - `--branch=NAME` - analyze a specific branch (default: default branch)

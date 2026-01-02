@@ -10,6 +10,8 @@ module Git
       SCHEMA_VERSION = 1
 
       def self.path(git_dir = nil)
+        return ENV["GIT_PKGS_DB"] if ENV["GIT_PKGS_DB"] && !ENV["GIT_PKGS_DB"].empty?
+
         git_dir ||= find_git_dir
         File.join(git_dir, DB_FILE)
       end

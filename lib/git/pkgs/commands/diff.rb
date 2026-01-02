@@ -60,35 +60,38 @@ module Git
           removed = changes.select { |c| c.change_type == "removed" }
 
           if added.any?
-            puts "Added:"
+            puts Color.green("Added:")
             added.group_by(&:name).each do |name, pkg_changes|
               latest = pkg_changes.last
-              puts "  + #{name} #{latest.requirement} (#{latest.manifest.path})"
+              puts Color.green("  + #{name} #{latest.requirement} (#{latest.manifest.path})")
             end
             puts
           end
 
           if modified.any?
-            puts "Modified:"
+            puts Color.yellow("Modified:")
             modified.group_by(&:name).each do |name, pkg_changes|
               first = pkg_changes.first
               latest = pkg_changes.last
-              puts "  ~ #{name} #{first.previous_requirement} -> #{latest.requirement}"
+              puts Color.yellow("  ~ #{name} #{first.previous_requirement} -> #{latest.requirement}")
             end
             puts
           end
 
           if removed.any?
-            puts "Removed:"
+            puts Color.red("Removed:")
             removed.group_by(&:name).each do |name, pkg_changes|
               latest = pkg_changes.last
-              puts "  - #{name} (was #{latest.requirement})"
+              puts Color.red("  - #{name} (was #{latest.requirement})")
             end
             puts
           end
 
           # Summary
-          puts "Summary: +#{added.map(&:name).uniq.count} -#{removed.map(&:name).uniq.count} ~#{modified.map(&:name).uniq.count}"
+          added_count = Color.green("+#{added.map(&:name).uniq.count}")
+          removed_count = Color.red("-#{removed.map(&:name).uniq.count}")
+          modified_count = Color.yellow("~#{modified.map(&:name).uniq.count}")
+          puts "Summary: #{added_count} #{removed_count} #{modified_count}"
         end
 
         def find_or_create_commit(repo, sha)

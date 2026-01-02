@@ -4,6 +4,7 @@
 - Consistent error handling across all commands (JSON errors when `--format=json`)
 - `git pkgs update` now uses a transaction for atomicity and better performance
 - `GIT_PKGS_DB` environment variable to customize database location
+- Colored output for diff, show, and history commands (respects `NO_COLOR`)
 - Renamed `git pkgs outdated` to `git pkgs stale` (outdated remains as alias)
 - `git pkgs log` command to list commits with dependency changes
 - `git pkgs schema` command to output database schema in text, SQL, JSON, or markdown

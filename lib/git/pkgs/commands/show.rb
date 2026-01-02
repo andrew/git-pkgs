@@ -56,25 +56,25 @@ module Git
           removed = changes.select { |c| c.change_type == "removed" }
 
           if added.any?
-            puts "Added:"
+            puts Color.green("Added:")
             added.each do |change|
-              puts "  #{change.name} #{change.requirement} (#{change.ecosystem}, #{change.manifest.path})"
+              puts Color.green("  + #{change.name} #{change.requirement} (#{change.ecosystem}, #{change.manifest.path})")
             end
             puts
           end
 
           if modified.any?
-            puts "Modified:"
+            puts Color.yellow("Modified:")
             modified.each do |change|
-              puts "  #{change.name} #{change.previous_requirement} -> #{change.requirement} (#{change.ecosystem}, #{change.manifest.path})"
+              puts Color.yellow("  ~ #{change.name} #{change.previous_requirement} -> #{change.requirement} (#{change.ecosystem}, #{change.manifest.path})")
             end
             puts
           end
 
           if removed.any?
-            puts "Removed:"
+            puts Color.red("Removed:")
             removed.each do |change|
-              puts "  #{change.name} #{change.requirement} (#{change.ecosystem}, #{change.manifest.path})"
+              puts Color.red("  - #{change.name} #{change.requirement} (#{change.ecosystem}, #{change.manifest.path})")
             end
             puts
           end

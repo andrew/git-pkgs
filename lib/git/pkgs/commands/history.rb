@@ -76,13 +76,13 @@ module Git
 
             case change.change_type
             when "added"
-              action = "Added"
+              action = Color.green("Added")
               version_info = change.requirement
             when "modified"
-              action = "Updated"
+              action = Color.yellow("Updated")
               version_info = "#{change.previous_requirement} -> #{change.requirement}"
             when "removed"
-              action = "Removed"
+              action = Color.red("Removed")
               version_info = change.requirement
             end
 

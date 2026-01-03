@@ -15,6 +15,8 @@ require_relative "pkgs/models/commit"
 require_relative "pkgs/models/manifest"
 require_relative "pkgs/models/dependency_change"
 require_relative "pkgs/models/dependency_snapshot"
+require_relative "pkgs/models/package"
+require_relative "pkgs/models/version"
 
 require_relative "pkgs/commands/init"
 require_relative "pkgs/commands/update"

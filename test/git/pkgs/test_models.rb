@@ -181,4 +181,80 @@ class Git::Pkgs::TestModels < Minitest::Test
     assert_equal "pkg:npm/lodash@4.17.21", snapshot.purl.to_s
     assert_equal "pkg:npm/lodash", snapshot.purl(with_version: false).to_s
   end
+
+  def test_package_creation
+    package = Git::Pkgs::Models::Package.create!(
+      purl: "pkg:gem/rails",
+      latest_version: "7.1.0",
+      license: "MIT",
+      description: "Full-stack web framework",
+      source: "ecosystems"
+    )
+
+    assert_equal "pkg:gem/rails", package.purl
+    assert_equal "7.1.0", package.latest_version
+    assert_equal "MIT", package.license
+    assert_equal "ecosystems", package.source
+  end
+
+  def test_package_parsed_purl
+    package = Git::Pkgs::Models::Package.create!(purl: "pkg:gem/rails")
+
+    assert_equal "gem", package.parsed_purl.type
+    assert_equal "rails", package.parsed_purl.name
+  end
+
+  def test_package_enriched
+    package = Git::Pkgs::Models::Package.create!(purl: "pkg:gem/rails")
+    refute package.enriched?
+
+    package.update!(enriched_at: Time.now)
+    assert package.enriched?
+  end
+
+  def test_version_creation
+    Git::Pkgs::Models::Package.create!(purl: "pkg:gem/rails")
+
+    version = Git::Pkgs::Models::Version.create!(
+      purl: "pkg:gem/rails@7.0.0",
+      package_purl: "pkg:gem/rails",
+      license: "MIT",
+      published_at: Time.parse("2021-12-15"),
+      integrity: "sha256:abc123",
+      source: "ecosystems"
+    )
+
+    assert_equal "pkg:gem/rails@7.0.0", version.purl
+    assert_equal "pkg:gem/rails", version.package_purl
+    assert_equal "7.0.0", version.version_string
+  end
+
+  def test_version_belongs_to_package
+    package = Git::Pkgs::Models::Package.create!(purl: "pkg:gem/rails")
+
+    version = Git::Pkgs::Models::Version.create!(
+      purl: "pkg:gem/rails@7.0.0",
+      package_purl: "pkg:gem/rails"
+    )
+
+    assert_equal package, version.package
+    assert_includes package.versions, version
+  end
+
+  def test_package_purl_uniqueness
+    Git::Pkgs::Models::Package.create!(purl: "pkg:gem/rails")
+
+    assert_raises(ActiveRecord::RecordInvalid) do
+      Git::Pkgs::Models::Package.create!(purl: "pkg:gem/rails")
+    end
+  end
+
+  def test_version_purl_uniqueness
+    Git::Pkgs::Models::Package.create!(purl: "pkg:gem/rails")
+    Git::Pkgs::Models::Version.create!(purl: "pkg:gem/rails@7.0.0", package_purl: "pkg:gem/rails")
+
+    assert_raises(ActiveRecord::RecordInvalid) do
+      Git::Pkgs::Models::Version.create!(purl: "pkg:gem/rails@7.0.0", package_purl: "pkg:gem/rails")
+    end
+  end
 end

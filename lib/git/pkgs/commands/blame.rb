@@ -69,20 +69,24 @@ module Git
             end
             puts JSON.pretty_generate(json_data)
           else
-            grouped = blame_data.group_by { |d| [d[:manifest], d[:ecosystem]] }
+            paginate { output_text(blame_data) }
+          end
+        end
 
-            grouped.each do |(manifest, ecosystem), deps|
-              puts "#{manifest} (#{ecosystem}):"
+        def output_text(blame_data)
+          grouped = blame_data.group_by { |d| [d[:manifest], d[:ecosystem]] }
 
-              max_name_len = deps.map { |d| d[:name].length }.max
-              max_author_len = deps.map { |d| d[:author].length }.max
+          grouped.each do |(manifest, ecosystem), deps|
+            puts "#{manifest} (#{ecosystem}):"
 
-              deps.sort_by { |d| d[:name] }.each do |dep|
-                date = dep[:date].strftime("%Y-%m-%d")
-                puts "  #{dep[:name].ljust(max_name_len)}  #{dep[:author].ljust(max_author_len)}  #{date}  #{dep[:sha]}"
-              end
-              puts
+            max_name_len = deps.map { |d| d[:name].length }.max
+            max_author_len = deps.map { |d| d[:author].length }.max
+
+            deps.sort_by { |d| d[:name] }.each do |dep|
+              date = dep[:date].strftime("%Y-%m-%d")
+              puts "  #{dep[:name].ljust(max_name_len)}  #{dep[:author].ljust(max_author_len)}  #{date}  #{dep[:sha]}"
             end
+            puts
           end
         end
 
@@ -120,6 +124,10 @@ module Git
 
             opts.on("-f", "--format=FORMAT", "Output format (text, json)") do |v|
               options[:format] = v
+            end
+
+            opts.on("--no-pager", "Do not pipe output into a pager") do
+              options[:no_pager] = true
             end
 
             opts.on("-h", "--help", "Show this help") do

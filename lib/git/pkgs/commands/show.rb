@@ -41,7 +41,7 @@ module Git
           if @options[:format] == "json"
             output_json(commit, changes)
           else
-            output_text(commit, changes)
+            paginate { output_text(commit, changes) }
           end
         end
 
@@ -139,6 +139,10 @@ module Git
 
             opts.on("-f", "--format=FORMAT", "Output format (text, json)") do |v|
               options[:format] = v
+            end
+
+            opts.on("--no-pager", "Do not pipe output into a pager") do
+              options[:no_pager] = true
             end
 
             opts.on("-h", "--help", "Show this help") do

@@ -58,7 +58,7 @@ module Git
           if @options[:format] == "json"
             output_json(changes)
           else
-            output_text(changes, package_name)
+            paginate { output_text(changes, package_name) }
           end
         end
 
@@ -143,6 +143,10 @@ module Git
 
             opts.on("--until=DATE", "Show changes before date (YYYY-MM-DD)") do |v|
               options[:until] = v
+            end
+
+            opts.on("--no-pager", "Do not pipe output into a pager") do
+              options[:no_pager] = true
             end
 
             opts.on("-h", "--help", "Show this help") do

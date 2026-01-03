@@ -340,6 +340,27 @@ NO_COLOR=1 git pkgs diff --from=HEAD~10
 
 Or set `NO_COLOR` in your shell profile to disable colors permanently. See [no-color.org](https://no-color.org/) for details.
 
+## Pager
+
+Long output is piped through a pager, following git's precedence:
+
+1. `GIT_PAGER` environment variable
+2. `core.pager` git config
+3. `PAGER` environment variable
+4. `less -FRSX` as fallback
+
+To disable paging for a single command:
+
+```bash
+git pkgs history --no-pager
+```
+
+To disable paging entirely, set your pager to `cat` or empty string:
+
+```bash
+git config core.pager cat
+```
+
 ## Performance
 
 Benchmarked on a MacBook Pro analyzing [octobox](https://github.com/octobox/octobox) (5191 commits, 8 years of history): init takes about 18 seconds at roughly 300 commits/sec, producing an 8.3 MB database. About half the commits (2531) had dependency changes.

@@ -52,6 +52,10 @@ module Git
             return
           end
 
+          paginate { output_text(from_commit, to_commit, changes) }
+        end
+
+        def output_text(from_commit, to_commit, changes)
           puts "Dependency changes from #{from_commit.short_sha} to #{to_commit.short_sha}:"
           puts
 
@@ -131,6 +135,10 @@ module Git
 
             opts.on("-e", "--ecosystem=NAME", "Filter by ecosystem") do |v|
               options[:ecosystem] = v
+            end
+
+            opts.on("--no-pager", "Do not pipe output into a pager") do
+              options[:no_pager] = true
             end
 
             opts.on("-h", "--help", "Show this help") do

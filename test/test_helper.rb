@@ -1,11 +1,19 @@
 # frozen_string_literal: true
 
 $LOAD_PATH.unshift File.expand_path("../lib", __dir__)
+
+# Suppress warnings from bibliothecary gem
+Warning[:deprecated] = false
+original_verbose = $VERBOSE
+$VERBOSE = nil
 require "git/pkgs"
+$VERBOSE = original_verbose
 
 require "minitest/autorun"
 require "fileutils"
 require "tmpdir"
+
+ActiveRecord::Migration.verbose = false
 
 module TestHelpers
   def create_test_repo

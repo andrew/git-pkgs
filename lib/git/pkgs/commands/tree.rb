@@ -38,6 +38,10 @@ module Git
           # Group by manifest and build tree
           grouped = snapshots.group_by { |s| s.manifest }
 
+          paginate { output_text(grouped, snapshots) }
+        end
+
+        def output_text(grouped, snapshots)
           grouped.each do |manifest, deps|
             puts "#{manifest.path} (#{manifest.ecosystem})"
             puts
@@ -102,6 +106,10 @@ module Git
 
             opts.on("-b", "--branch=NAME", "Branch context for finding snapshots") do |v|
               options[:branch] = v
+            end
+
+            opts.on("--no-pager", "Do not pipe output into a pager") do
+              options[:no_pager] = true
             end
 
             opts.on("-h", "--help", "Show this help") do

@@ -71,6 +71,10 @@ module Git
             return
           end
 
+          paginate { output_text(outdated_data) }
+        end
+
+        def output_text(outdated_data)
           puts "Dependencies by last update:"
           puts
 
@@ -100,6 +104,10 @@ module Git
 
             opts.on("-d", "--days=N", Integer, "Only show deps not updated in N days") do |v|
               options[:days] = v
+            end
+
+            opts.on("--no-pager", "Do not pipe output into a pager") do
+              options[:no_pager] = true
             end
 
             opts.on("-h", "--help", "Show this help") do

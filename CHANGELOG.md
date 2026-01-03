@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Pager support for long output (respects `GIT_PAGER`, `core.pager`, `PAGER`)
+- `--no-pager` option for commands with long output
 - `git pkgs stats` now supports `--since` and `--until` date filters
 - Consistent error handling across all commands (JSON errors when `--format=json`)
 - `git pkgs update` now uses a transaction for atomicity and better performance

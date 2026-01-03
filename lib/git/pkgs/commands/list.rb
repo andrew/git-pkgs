@@ -42,16 +42,20 @@ module Git
             require "json"
             puts JSON.pretty_generate(deps)
           else
-            grouped = deps.group_by { |d| [d[:manifest_path], d[:ecosystem]] }
+            paginate { output_text(deps) }
+          end
+        end
 
-            grouped.each do |(path, platform), manifest_deps|
-              puts "#{path} (#{platform}):"
-              manifest_deps.sort_by { |d| d[:name] }.each do |dep|
-                type_suffix = dep[:dependency_type] ? " [#{dep[:dependency_type]}]" : ""
-                puts "  #{dep[:name]} #{dep[:requirement]}#{type_suffix}"
-              end
-              puts
+        def output_text(deps)
+          grouped = deps.group_by { |d| [d[:manifest_path], d[:ecosystem]] }
+
+          grouped.each do |(path, platform), manifest_deps|
+            puts "#{path} (#{platform}):"
+            manifest_deps.sort_by { |d| d[:name] }.each do |dep|
+              type_suffix = dep[:dependency_type] ? " [#{dep[:dependency_type]}]" : ""
+              puts "  #{dep[:name]} #{dep[:requirement]}#{type_suffix}"
             end
+            puts
           end
         end
 
@@ -137,6 +141,10 @@ module Git
 
             opts.on("-f", "--format=FORMAT", "Output format (text, json)") do |v|
               options[:format] = v
+            end
+
+            opts.on("--no-pager", "Do not pipe output into a pager") do
+              options[:no_pager] = true
             end
 
             opts.on("-h", "--help", "Show this help") do

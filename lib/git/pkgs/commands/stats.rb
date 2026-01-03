@@ -31,7 +31,7 @@ module Git
               require "json"
               puts JSON.pretty_generate(data)
             else
-              output_text(data)
+              paginate { output_text(data) }
             end
           end
         end
@@ -186,12 +186,16 @@ module Git
             data = counts.map { |name, count| { author: name, added: count } }
             puts JSON.pretty_generate(data)
           else
-            puts "Dependencies Added by Author"
-            puts "=" * 40
-            puts
-            counts.each do |name, count|
-              puts "  #{count.to_s.rjust(4)}  #{name}"
-            end
+            paginate { output_by_author_text(counts) }
+          end
+        end
+
+        def output_by_author_text(counts)
+          puts "Dependencies Added by Author"
+          puts "=" * 40
+          puts
+          counts.each do |name, count|
+            puts "  #{count.to_s.rjust(4)}  #{name}"
           end
         end
 
@@ -233,6 +237,10 @@ module Git
 
             opts.on("-n", "--limit=N", Integer, "Limit results (default: 20)") do |v|
               options[:limit] = v
+            end
+
+            opts.on("--no-pager", "Do not pipe output into a pager") do
+              options[:no_pager] = true
             end
 
             opts.on("-h", "--help", "Show this help") do

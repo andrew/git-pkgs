@@ -101,7 +101,7 @@ module Git
         def parse_coauthors(message)
           return [] unless message
 
-          message.scan(/^Co-authored-by:\s*(.+?)\s*<[^>]+>/i).flatten
+          message.scan(/^Co-authored-by:\s*([^<]+)<[^>]+>/i).flatten.map(&:strip)
         end
 
         def bot_author?(name)

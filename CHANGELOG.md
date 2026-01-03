@@ -1,3 +1,7 @@
+## [Unreleased]
+
+- `git pkgs where` command to find where a package is declared in manifest files
+
 ## [0.3.0] - 2026-01-03
 
 - Pager support for long output (respects `GIT_PAGER`, `core.pager`, `PAGER`)

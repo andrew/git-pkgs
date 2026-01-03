@@ -111,4 +111,74 @@ class Git::Pkgs::TestModels < Minitest::Test
     assert_includes branch.commits, commit
     assert_includes commit.branches, branch
   end
+
+  def test_dependency_change_purl_from_lockfile
+    repo = Git::Pkgs::Repository.new(@test_dir)
+    rugged_commit = repo.walk("main").first
+    commit = Git::Pkgs::Models::Commit.find_or_create_from_rugged(rugged_commit)
+
+    manifest = Git::Pkgs::Models::Manifest.find_or_create(
+      path: "Gemfile.lock",
+      ecosystem: "rubygems",
+      kind: "lockfile"
+    )
+
+    change = Git::Pkgs::Models::DependencyChange.create!(
+      commit: commit,
+      manifest: manifest,
+      name: "rails",
+      ecosystem: "rubygems",
+      change_type: "added",
+      requirement: "7.0.0"
+    )
+
+    assert_equal "pkg:gem/rails@7.0.0", change.purl.to_s
+    assert_equal "pkg:gem/rails", change.purl(with_version: false).to_s
+  end
+
+  def test_dependency_change_purl_from_manifest_omits_version
+    repo = Git::Pkgs::Repository.new(@test_dir)
+    rugged_commit = repo.walk("main").first
+    commit = Git::Pkgs::Models::Commit.find_or_create_from_rugged(rugged_commit)
+
+    manifest = Git::Pkgs::Models::Manifest.find_or_create(
+      path: "Gemfile",
+      ecosystem: "rubygems",
+      kind: "manifest"
+    )
+
+    change = Git::Pkgs::Models::DependencyChange.create!(
+      commit: commit,
+      manifest: manifest,
+      name: "rails",
+      ecosystem: "rubygems",
+      change_type: "added",
+      requirement: "~> 7.0"
+    )
+
+    assert_equal "pkg:gem/rails", change.purl.to_s
+  end
+
+  def test_dependency_snapshot_purl_from_lockfile
+    repo = Git::Pkgs::Repository.new(@test_dir)
+    rugged_commit = repo.walk("main").first
+    commit = Git::Pkgs::Models::Commit.find_or_create_from_rugged(rugged_commit)
+
+    manifest = Git::Pkgs::Models::Manifest.find_or_create(
+      path: "package-lock.json",
+      ecosystem: "npm",
+      kind: "lockfile"
+    )
+
+    snapshot = Git::Pkgs::Models::DependencySnapshot.create!(
+      commit: commit,
+      manifest: manifest,
+      name: "lodash",
+      ecosystem: "npm",
+      requirement: "4.17.21"
+    )
+
+    assert_equal "pkg:npm/lodash@4.17.21", snapshot.purl.to_s
+    assert_equal "pkg:npm/lodash", snapshot.purl(with_version: false).to_s
+  end
 end

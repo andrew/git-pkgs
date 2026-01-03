@@ -7,6 +7,7 @@ require_relative "pkgs/cli"
 require_relative "pkgs/database"
 require_relative "pkgs/repository"
 require_relative "pkgs/analyzer"
+require_relative "pkgs/purl_helper"
 
 require_relative "pkgs/models/branch"
 require_relative "pkgs/models/branch_commit"

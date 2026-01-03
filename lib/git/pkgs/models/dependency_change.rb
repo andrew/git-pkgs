@@ -15,6 +15,11 @@ module Git
         scope :removed, -> { where(change_type: "removed") }
         scope :for_package, ->(name) { where(name: name) }
         scope :for_platform, ->(platform) { where(ecosystem: platform) }
+
+        def purl(with_version: true)
+          version = with_version && manifest&.kind == "lockfile" ? requirement : nil
+          PurlHelper.build_purl(ecosystem: ecosystem, name: name, version: version)
+        end
       end
     end
   end

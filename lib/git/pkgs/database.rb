@@ -7,7 +7,7 @@ module Git
   module Pkgs
     class Database
       DB_FILE = "pkgs.sqlite3"
-      SCHEMA_VERSION = 1
+      SCHEMA_VERSION = 2
 
       def self.path(git_dir = nil)
         return ENV["GIT_PKGS_DB"] if ENV["GIT_PKGS_DB"] && !ENV["GIT_PKGS_DB"].empty?
@@ -118,6 +118,32 @@ module Git
             t.string :dependency_type
             t.timestamps
           end
+
+          create_table :packages, if_not_exists: true do |t|
+            t.string :purl, null: false
+            t.string :latest_version
+            t.string :license
+            t.text :description
+            t.string :homepage
+            t.string :repository_url
+            t.string :source
+            t.datetime :enriched_at
+            t.timestamps
+          end
+          add_index :packages, :purl, unique: true, if_not_exists: true
+
+          create_table :versions, if_not_exists: true do |t|
+            t.string :purl, null: false
+            t.string :package_purl, null: false
+            t.string :license
+            t.datetime :published_at
+            t.text :integrity
+            t.string :source
+            t.datetime :enriched_at
+            t.timestamps
+          end
+          add_index :versions, :purl, unique: true, if_not_exists: true
+          add_index :versions, :package_purl, if_not_exists: true
         end
 
         set_version

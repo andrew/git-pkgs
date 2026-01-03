@@ -21,6 +21,11 @@ module Git
 
           where(commit: commit)
         end
+
+        def purl(with_version: true)
+          version = with_version && manifest&.kind == "lockfile" ? requirement : nil
+          PurlHelper.build_purl(ecosystem: ecosystem, name: name, version: version)
+        end
       end
     end
   end

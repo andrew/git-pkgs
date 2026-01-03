@@ -328,6 +328,18 @@ jobs:
       - run: git pkgs diff --from=origin/${{ github.base_ref }} --to=HEAD
 ```
 
+## Colors
+
+Output is colored when writing to a terminal. Colors are automatically disabled when piping to another command or redirecting to a file.
+
+To disable colors explicitly:
+
+```bash
+NO_COLOR=1 git pkgs diff --from=HEAD~10
+```
+
+Or set `NO_COLOR` in your shell profile to disable colors permanently. See [no-color.org](https://no-color.org/) for details.
+
 ## Performance
 
 Benchmarked on a MacBook Pro analyzing [octobox](https://github.com/octobox/octobox) (5191 commits, 8 years of history): init takes about 18 seconds at roughly 300 commits/sec, producing an 8.3 MB database. About half the commits (2531) had dependency changes.

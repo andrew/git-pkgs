@@ -2,11 +2,11 @@
 
 - Pager support for long output (respects `GIT_PAGER`, `core.pager`, `PAGER`)
 - `--no-pager` option for commands with long output
+- Colored output (respects `NO_COLOR`, `color.ui`, `color.pkgs`)
+- `GIT_DIR` and `GIT_PKGS_DB` environment variable support
 - `git pkgs stats` now supports `--since` and `--until` date filters
 - Consistent error handling across all commands (JSON errors when `--format=json`)
 - `git pkgs update` now uses a transaction for atomicity and better performance
-- `GIT_PKGS_DB` environment variable to customize database location
-- Colored output for diff, show, and history commands (respects `NO_COLOR`)
 - Renamed `git pkgs outdated` to `git pkgs stale` (outdated remains as alias)
 - `git pkgs log` command to list commits with dependency changes
 - `git pkgs schema` command to output database schema in text, SQL, JSON, or markdown

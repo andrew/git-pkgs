@@ -17,6 +17,14 @@ module Git
       end
 
       def self.find_git_dir
+        # Respect GIT_DIR environment variable
+        if ENV["GIT_DIR"] && !ENV["GIT_DIR"].empty?
+          git_dir = ENV["GIT_DIR"]
+          return git_dir if File.directory?(git_dir)
+
+          raise NotInGitRepoError, "GIT_DIR '#{git_dir}' does not exist"
+        end
+
         dir = Dir.pwd
         loop do
           git_dir = File.join(dir, ".git")

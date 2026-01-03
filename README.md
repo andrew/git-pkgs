@@ -37,7 +37,7 @@ git pkgs diff --from=main --to=feature  # compare branches
 git pkgs init
 ```
 
-Walks through git history and builds a SQLite database of dependency changes, stored in `.git/pkgs.sqlite3`. Set `GIT_PKGS_DB` environment variable to use a custom location.
+Walks through git history and builds a SQLite database of dependency changes, stored in `.git/pkgs.sqlite3`.
 
 Options:
 - `--branch=NAME` - analyze a specific branch (default: default branch)
@@ -328,38 +328,18 @@ jobs:
       - run: git pkgs diff --from=origin/${{ github.base_ref }} --to=HEAD
 ```
 
-## Colors
+## Configuration
 
-Output is colored when writing to a terminal. Colors are automatically disabled when piping to another command or redirecting to a file.
+git-pkgs respects [standard git configuration](https://git-scm.com/docs/git-config).
 
-To disable colors explicitly:
+**Colors** are enabled when writing to a terminal. Disable with `NO_COLOR=1`, `git config color.ui never`, or `git config color.pkgs never` for git-pkgs only.
 
-```bash
-NO_COLOR=1 git pkgs diff --from=HEAD~10
-```
+**Pager** follows git's precedence: `GIT_PAGER` env, `core.pager` config, `PAGER` env, then `less -FRSX`. Use `--no-pager` flag or `git config core.pager cat` to disable.
 
-Or set `NO_COLOR` in your shell profile to disable colors permanently. See [no-color.org](https://no-color.org/) for details.
+**Environment variables:**
 
-## Pager
-
-Long output is piped through a pager, following git's precedence:
-
-1. `GIT_PAGER` environment variable
-2. `core.pager` git config
-3. `PAGER` environment variable
-4. `less -FRSX` as fallback
-
-To disable paging for a single command:
-
-```bash
-git pkgs history --no-pager
-```
-
-To disable paging entirely, set your pager to `cat` or empty string:
-
-```bash
-git config core.pager cat
-```
+- `GIT_DIR` - git directory location (standard git variable)
+- `GIT_PKGS_DB` - database path (default: `.git/pkgs.sqlite3`)
 
 ## Performance
 

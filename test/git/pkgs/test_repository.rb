@@ -6,6 +6,8 @@ class Git::Pkgs::TestRepository < Minitest::Test
   include TestHelpers
 
   def setup
+    @original_git_dir = ENV["GIT_DIR"]
+    ENV.delete("GIT_DIR")
     create_test_repo
     add_file("README.md", "# Test")
     commit("Initial commit")
@@ -13,6 +15,11 @@ class Git::Pkgs::TestRepository < Minitest::Test
 
   def teardown
     cleanup_test_repo
+    if @original_git_dir
+      ENV["GIT_DIR"] = @original_git_dir
+    else
+      ENV.delete("GIT_DIR")
+    end
   end
 
   def test_initializes_with_path
@@ -94,5 +101,13 @@ class Git::Pkgs::TestRepository < Minitest::Test
     sha = repo.rev_parse("nonexistent-ref")
 
     assert_nil sha
+  end
+
+  def test_respects_git_dir_env
+    git_dir = File.join(@test_dir, ".git")
+    ENV["GIT_DIR"] = git_dir
+
+    repo = Git::Pkgs::Repository.new
+    assert_equal git_dir, repo.path
   end
 end

@@ -7,9 +7,9 @@ module Git
     class Repository
       attr_reader :path
 
-      def initialize(path = Dir.pwd)
-        @path = path
-        @rugged = Rugged::Repository.new(path)
+      def initialize(path = nil)
+        @path = path || ENV["GIT_DIR"] || Dir.pwd
+        @rugged = Rugged::Repository.new(@path)
       end
 
       def git_dir

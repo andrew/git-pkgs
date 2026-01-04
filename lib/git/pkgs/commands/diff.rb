@@ -29,8 +29,8 @@ module Git
           error "Could not resolve '#{from_ref}'" unless from_sha
           error "Could not resolve '#{to_ref}'" unless to_sha
 
-          from_commit = find_or_create_commit(repo, from_sha)
-          to_commit = find_or_create_commit(repo, to_sha)
+          from_commit = Models::Commit.find_or_create_from_repo(repo, from_sha)
+          to_commit = Models::Commit.find_or_create_from_repo(repo, to_sha)
 
           error "Commit '#{from_sha[0..7]}' not found" unless from_commit
           error "Commit '#{to_sha[0..7]}' not found" unless to_commit
@@ -96,27 +96,6 @@ module Git
           removed_count = Color.red("-#{removed.map(&:name).uniq.count}")
           modified_count = Color.yellow("~#{modified.map(&:name).uniq.count}")
           puts "Summary: #{added_count} #{removed_count} #{modified_count}"
-        end
-
-        def find_or_create_commit(repo, sha)
-          commit = Models::Commit.find_by(sha: sha) ||
-                   Models::Commit.where("sha LIKE ?", "#{sha}%").first
-          return commit if commit
-
-          # Lazily insert commit if it exists in git but not in database
-          rugged_commit = repo.lookup(sha)
-          return nil unless rugged_commit
-
-          Models::Commit.create!(
-            sha: rugged_commit.oid,
-            message: rugged_commit.message,
-            author_name: rugged_commit.author[:name],
-            author_email: rugged_commit.author[:email],
-            committed_at: rugged_commit.time,
-            has_dependency_changes: false
-          )
-        rescue Rugged::OdbError
-          nil
         end
 
         def parse_options

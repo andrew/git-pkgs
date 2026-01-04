@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "time"
-
 module Git
   module Pkgs
     module Commands
@@ -100,12 +98,6 @@ module Git
           end
 
           puts JSON.pretty_generate(data)
-        end
-
-        def parse_time(str)
-          Time.parse(str)
-        rescue ArgumentError
-          error "Invalid date format: #{str}"
         end
 
         def parse_options

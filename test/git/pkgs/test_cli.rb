@@ -70,7 +70,7 @@ class Git::Pkgs::TestDiffCommand < Minitest::Test
     cleanup_test_repo
   end
 
-  def test_find_or_create_commit_finds_existing_commit
+  def test_find_or_create_from_repo_finds_existing_commit
     repo = Git::Pkgs::Repository.new(@test_dir)
     sha = repo.head_sha
 
@@ -83,22 +83,20 @@ class Git::Pkgs::TestDiffCommand < Minitest::Test
       committed_at: Time.now
     )
 
-    diff = Git::Pkgs::Commands::Diff.new([])
-    result = diff.send(:find_or_create_commit, repo, sha)
+    result = Git::Pkgs::Models::Commit.find_or_create_from_repo(repo, sha)
 
     assert result
     assert_equal sha, result.sha
   end
 
-  def test_find_or_create_commit_creates_missing_commit
+  def test_find_or_create_from_repo_creates_missing_commit
     repo = Git::Pkgs::Repository.new(@test_dir)
     sha = repo.head_sha
 
     # Commit doesn't exist in database yet
     assert_nil Git::Pkgs::Models::Commit.find_by(sha: sha)
 
-    diff = Git::Pkgs::Commands::Diff.new([])
-    result = diff.send(:find_or_create_commit, repo, sha)
+    result = Git::Pkgs::Models::Commit.find_or_create_from_repo(repo, sha)
 
     assert result
     assert_equal sha, result.sha
@@ -106,11 +104,10 @@ class Git::Pkgs::TestDiffCommand < Minitest::Test
     assert Git::Pkgs::Models::Commit.find_by(sha: sha)
   end
 
-  def test_find_or_create_commit_returns_nil_for_invalid_sha
+  def test_find_or_create_from_repo_returns_nil_for_invalid_sha
     repo = Git::Pkgs::Repository.new(@test_dir)
 
-    diff = Git::Pkgs::Commands::Diff.new([])
-    result = diff.send(:find_or_create_commit, repo, "0000000000000000000000000000000000000000")
+    result = Git::Pkgs::Models::Commit.find_or_create_from_repo(repo, "0000000000000000000000000000000000000000")
 
     assert_nil result
   end

@@ -22,7 +22,7 @@ module Git
           sha = repo.rev_parse(ref)
           error "Could not resolve '#{ref}'" unless sha
 
-          commit = find_or_create_commit(repo, sha)
+          commit = Models::Commit.find_or_create_from_repo(repo, sha)
           error "Commit '#{sha[0..7]}' not found" unless commit
 
           changes = Models::DependencyChange
@@ -105,26 +105,6 @@ module Git
           }
 
           puts JSON.pretty_generate(data)
-        end
-
-        def find_or_create_commit(repo, sha)
-          commit = Models::Commit.find_by(sha: sha) ||
-                   Models::Commit.where("sha LIKE ?", "#{sha}%").first
-          return commit if commit
-
-          rugged_commit = repo.lookup(sha)
-          return nil unless rugged_commit
-
-          Models::Commit.create!(
-            sha: rugged_commit.oid,
-            message: rugged_commit.message,
-            author_name: rugged_commit.author[:name],
-            author_email: rugged_commit.author[:email],
-            committed_at: rugged_commit.time,
-            has_dependency_changes: false
-          )
-        rescue Rugged::OdbError
-          nil
         end
 
         def parse_options

@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "time"
-
 module Git
   module Pkgs
     module Commands
@@ -159,11 +157,6 @@ module Git
           options
         end
 
-        def parse_time(str)
-          Time.parse(str)
-        rescue ArgumentError
-          error "Invalid date format: #{str}"
-        end
       end
     end
   end

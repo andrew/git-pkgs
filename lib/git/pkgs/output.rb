@@ -1,12 +1,19 @@
 # frozen_string_literal: true
 
 require "json"
+require "time"
 require_relative "pager"
 
 module Git
   module Pkgs
     module Output
       include Pager
+
+      def parse_time(str)
+        Time.parse(str)
+      rescue ArgumentError
+        error "Invalid date format: #{str}"
+      end
       # Print error message and exit with code 1.
       # Use for user errors (bad input, invalid refs) and system errors (db missing).
       # When format is :json, outputs JSON to stdout; otherwise outputs text to stderr.

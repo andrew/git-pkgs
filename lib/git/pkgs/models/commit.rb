@@ -20,6 +20,25 @@ module Git
           end
         end
 
+        def self.find_or_create_from_repo(repo, sha)
+          commit = find_by(sha: sha) || where("sha LIKE ?", "#{sha}%").first
+          return commit if commit
+
+          rugged_commit = repo.lookup(sha)
+          return nil unless rugged_commit
+
+          create!(
+            sha: rugged_commit.oid,
+            message: rugged_commit.message,
+            author_name: rugged_commit.author[:name],
+            author_email: rugged_commit.author[:email],
+            committed_at: rugged_commit.time,
+            has_dependency_changes: false
+          )
+        rescue Rugged::OdbError
+          nil
+        end
+
         def short_sha
           sha[0, 7]
         end

@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "time"
-
 module Git
   module Pkgs
     module Commands
@@ -197,12 +195,6 @@ module Git
           counts.each do |name, count|
             puts "  #{count.to_s.rjust(4)}  #{name}"
           end
-        end
-
-        def parse_time(str)
-          Time.parse(str)
-        rescue ArgumentError
-          error "Invalid date format: #{str}"
         end
 
         def parse_options

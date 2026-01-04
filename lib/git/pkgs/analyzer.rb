@@ -54,12 +54,30 @@ module Git
       def initialize(repository)
         @repository = repository
         @blob_cache = {}
+        @manifest_path_cache = {}
         Config.configure_bibliothecary
       end
 
       # Quick check if any paths might be manifests (fast regex check)
       def might_have_manifests?(paths)
         paths.any? { |p| p.match?(QUICK_MANIFEST_REGEX) }
+      end
+
+      # Cached version of Bibliothecary.identify_manifests
+      def identify_manifests_cached(paths)
+        uncached = paths.reject { |p| @manifest_path_cache.key?(p) }
+
+        if uncached.any?
+          # Call Bibliothecary only for uncached paths
+          manifests = Bibliothecary.identify_manifests(uncached)
+          manifest_set = manifests.to_set
+
+          uncached.each do |path|
+            @manifest_path_cache[path] = manifest_set.include?(path)
+          end
+        end
+
+        paths.select { |p| @manifest_path_cache[p] }
       end
 
       # Quick check if a commit touches any manifest files
@@ -71,7 +89,7 @@ module Git
 
         return false unless might_have_manifests?(all_paths)
 
-        Bibliothecary.identify_manifests(all_paths).any?
+        identify_manifests_cached(all_paths).any?
       end
 
       def analyze_commit(rugged_commit, previous_snapshot = {})
@@ -86,9 +104,9 @@ module Git
         all_paths = added_paths + modified_paths + removed_paths
         return nil unless might_have_manifests?(all_paths)
 
-        added_manifests = Bibliothecary.identify_manifests(added_paths)
-        modified_manifests = Bibliothecary.identify_manifests(modified_paths)
-        removed_manifests = Bibliothecary.identify_manifests(removed_paths)
+        added_manifests = identify_manifests_cached(added_paths)
+        modified_manifests = identify_manifests_cached(modified_paths)
+        removed_manifests = identify_manifests_cached(removed_paths)
 
         return nil if added_manifests.empty? && modified_manifests.empty? && removed_manifests.empty?
 
@@ -228,9 +246,14 @@ module Git
 
       # Cache stats for debugging
       def cache_stats
-        hits = @blob_cache.values.count { |v| v[:hits] > 0 }
-        total = @blob_cache.size
-        { cached_blobs: total, blobs_with_hits: hits }
+        blob_hits = @blob_cache.values.count { |v| v[:hits] > 0 }
+        blob_total = @blob_cache.size
+        manifest_paths = @manifest_path_cache.size
+        {
+          cached_blobs: blob_total,
+          blobs_with_hits: blob_hits,
+          cached_paths: manifest_paths
+        }
       end
 
       def parse_manifest_at_commit(rugged_commit, manifest_path)

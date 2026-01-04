@@ -5,7 +5,39 @@ require "optparse"
 module Git
   module Pkgs
     class CLI
-      COMMANDS = %w[init update hooks info list tree history search where why blame stale stats diff branch show log upgrade schema diff-driver].freeze
+      COMMAND_GROUPS = {
+        "Setup" => {
+          "init" => "Initialize the package database for this repository",
+          "update" => "Update the database with new commits",
+          "hooks" => "Manage git hooks for auto-updating",
+          "upgrade" => "Upgrade database after git-pkgs update",
+          "info" => "Show database size and row counts",
+          "branch" => "Manage tracked branches",
+          "schema" => "Show database schema",
+          "diff-driver" => "Install git textconv driver for lockfile diffs"
+        },
+        "Query" => {
+          "list" => "List dependencies at a commit",
+          "tree" => "Show dependency tree grouped by type",
+          "search" => "Find a dependency across all history",
+          "where" => "Show where a package appears in manifest files",
+          "why" => "Explain why a dependency exists"
+        },
+        "History" => {
+          "history" => "Show the history of a package",
+          "blame" => "Show who added each dependency",
+          "log" => "List commits with dependency changes",
+          "show" => "Show dependency changes in a commit",
+          "diff" => "Show dependency changes between commits"
+        },
+        "Analysis" => {
+          "stats" => "Show dependency statistics",
+          "stale" => "Show dependencies that haven't been updated"
+        }
+      }.freeze
+
+      COMMANDS = COMMAND_GROUPS.values.flat_map(&:keys).freeze
+      COMMAND_DESCRIPTIONS = COMMAND_GROUPS.values.reduce({}, :merge).freeze
       ALIASES = { "praise" => "blame", "outdated" => "stale" }.freeze
 
       def self.run(args)
@@ -46,36 +78,24 @@ module Git
       end
 
       def print_help
-        puts <<~HELP
-          Usage: git pkgs <command> [options]
+        puts "Usage: git pkgs <command> [options]"
+        puts
 
-          Commands:
-            init      Initialize the package database for this repository
-            update    Update the database with new commits
-            hooks     Manage git hooks for auto-updating
-            info      Show database size and row counts
-            branch    Manage tracked branches
-            list      List dependencies at a commit
-            tree      Show dependency tree grouped by type
-            history   Show the history of a package
-            search    Find a dependency across all history
-            where     Show where a package appears in manifest files
-            why       Explain why a dependency exists
-            blame     Show who added each dependency
-            stale     Show dependencies that haven't been updated
-            stats     Show dependency statistics
-            diff      Show dependency changes between commits
-            show      Show dependency changes in a commit
-            log       List commits with dependency changes
-            upgrade   Upgrade database after git-pkgs update
-            schema    Show database schema
+        max_cmd_len = COMMANDS.map(&:length).max
 
-          Options:
-            -h, --help     Show this help message
-            -v, --version  Show version
+        COMMAND_GROUPS.each do |group, commands|
+          puts "#{group}:"
+          commands.each do |cmd, desc|
+            puts "  #{cmd.ljust(max_cmd_len)}  #{desc}"
+          end
+          puts
+        end
 
-          Run 'git pkgs <command> --help' for command-specific options.
-        HELP
+        puts "Options:"
+        puts "  -h, --help     Show this help message"
+        puts "  -v, --version  Show version"
+        puts
+        puts "Run 'git pkgs <command> -h' for command-specific options."
       end
     end
   end

@@ -66,7 +66,7 @@ collect_time = Benchmark.realtime do
       unless manifests_cache[manifest_key]
         manifests_cache[manifest_key] = Git::Pkgs::Models::Manifest.find_or_create(
           path: change[:manifest_path],
-          platform: change[:platform],
+          ecosystem: change[:ecosystem],
           kind: change[:kind]
         )
       end
@@ -75,7 +75,7 @@ collect_time = Benchmark.realtime do
         commit_sha: rugged_commit.oid,
         manifest_path: manifest_key,
         name: change[:name],
-        platform: change[:platform],
+        ecosystem: change[:ecosystem],
         change_type: change[:change_type],
         requirement: change[:requirement],
         previous_requirement: change[:previous_requirement],
@@ -92,7 +92,7 @@ collect_time = Benchmark.realtime do
         commit_sha: rugged_commit.oid,
         manifest_path: manifest_path,
         name: name,
-        platform: dep_info[:platform],
+        ecosystem: dep_info[:ecosystem],
         requirement: dep_info[:requirement],
         dependency_type: dep_info[:dependency_type],
         created_at: now,
@@ -133,7 +133,7 @@ insert_time = Benchmark.realtime do
       commit_id: commit_ids[c[:commit_sha]],
       manifest_id: manifest_ids[c[:manifest_path]],
       name: c[:name],
-      platform: c[:platform],
+      ecosystem: c[:ecosystem],
       change_type: c[:change_type],
       requirement: c[:requirement],
       previous_requirement: c[:previous_requirement],
@@ -150,7 +150,7 @@ insert_time = Benchmark.realtime do
       commit_id: commit_ids[s[:commit_sha]],
       manifest_id: manifest_ids[s[:manifest_path]],
       name: s[:name],
-      platform: s[:platform],
+      ecosystem: s[:ecosystem],
       requirement: s[:requirement],
       dependency_type: s[:dependency_type],
       created_at: s[:created_at],

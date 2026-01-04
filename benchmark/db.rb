@@ -71,7 +71,7 @@ commits.each do |rugged_commit|
     timings[:manifest_find_create] += Benchmark.realtime do
       manifest = Git::Pkgs::Models::Manifest.find_or_create(
         path: change[:manifest_path],
-        platform: change[:platform],
+        ecosystem: change[:ecosystem],
         kind: change[:kind]
       )
     end
@@ -81,7 +81,7 @@ commits.each do |rugged_commit|
         commit: commit,
         manifest: manifest,
         name: change[:name],
-        platform: change[:platform],
+        ecosystem: change[:ecosystem],
         change_type: change[:change_type],
         requirement: change[:requirement],
         previous_requirement: change[:previous_requirement],
@@ -101,7 +101,7 @@ commits.each do |rugged_commit|
         manifest: manifest,
         name: name
       ) do |s|
-        s.platform = dep_info[:platform]
+        s.ecosystem = dep_info[:ecosystem]
         s.requirement = dep_info[:requirement]
         s.dependency_type = dep_info[:dependency_type]
       end

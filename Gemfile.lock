@@ -30,6 +30,7 @@ GEM
       tzinfo (~> 2.0, >= 2.0.5)
       uri (>= 0.13.1)
     base64 (0.3.0)
+    benchmark (0.5.0)
     bigdecimal (4.0.1)
     commander (5.0.0)
       highline (~> 3.0.0)
@@ -133,6 +134,7 @@ PLATFORMS
   x86_64-linux-musl
 
 DEPENDENCIES
+  benchmark
   git-pkgs!
   irb
   minitest
@@ -144,6 +146,7 @@ CHECKSUMS
   activerecord (8.1.1) sha256=e32c3a03e364fd803498eb4150c21bedc995aa83bc27122a94d480ab1dcb3d17
   activesupport (8.1.1) sha256=5e92534e8d0c8b8b5e6b16789c69dbea65c1d7b752269f71a39422e9546cea67
   base64 (0.3.0) sha256=27337aeabad6ffae05c265c450490628ef3ebd4b67be58257393227588f5a97b
+  benchmark (0.5.0) sha256=465df122341aedcb81a2a24b4d3bd19b6c67c1530713fd533f3ff034e419236c
   bigdecimal (4.0.1) sha256=8b07d3d065a9f921c80ceaea7c9d4ae596697295b584c296fe599dd0ad01c4a7
   commander (5.0.0) sha256=22ca42866ce5ed1a7f3e9a9c831a23d03b75b3743c7ad0302c3cbcd9eb5f257d
   concurrent-ruby (1.3.6) sha256=6b56837e1e7e5292f9864f34b69c5a2cbc75c0cf5338f1ce9903d10fa762d5ab

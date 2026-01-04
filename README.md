@@ -386,7 +386,7 @@ git-pkgs respects [standard git configuration](https://git-scm.com/docs/git-conf
 
 ## Performance
 
-Benchmarked on a MacBook Pro analyzing [octobox](https://github.com/octobox/octobox) (5191 commits, 8 years of history): init takes about 18 seconds at roughly 300 commits/sec, producing an 8.3 MB database. About half the commits (2531) had dependency changes.
+Benchmarked on an M1 MacBook Pro analyzing [octobox](https://github.com/octobox/octobox) (5191 commits, 8 years of history): init takes about 18 seconds at roughly 300 commits/sec, producing an 8.3 MB database. About half the commits (2531) had dependency changes.
 
 Optimizations:
 - Bulk inserts with transaction batching (100 commits per transaction)
@@ -401,40 +401,13 @@ git-pkgs uses [ecosystems-bibliothecary](https://github.com/ecosyste-ms/biblioth
 
 Actions, Anaconda, BentoML, Bower, Cargo, CocoaPods, Cog, CPAN, CRAN, CycloneDX, Docker, Dub, DVC, Elm, Go, Haxelib, Homebrew, Julia, Maven, Meteor, MLflow, npm, NuGet, Ollama, Packagist, Pub, PyPI, RubyGems, Shards, SPDX, Vcpkg
 
-## How it works
+## Contributing
 
-git-pkgs walks your git history, extracts dependency files at each commit, and diffs them to detect changes. Results are stored in a SQLite database for fast querying.
+Bug reports, feature requests, and pull requests are welcome. If you're unsure about a change, open an issue first to discuss it.
 
-The database schema stores:
-- Commits with dependency changes
-- Dependency changes (added/modified/removed) with before/after versions
-- Periodic snapshots of full dependency state for efficient point-in-time queries
+Good first contributions: adding tests, improving error messages, or supporting new manifest formats via [ecosystems-bibliothecary](https://github.com/ecosyste-ms/bibliothecary).
 
-See [docs/schema.md](docs/schema.md) for full schema documentation.
-
-Since the database is just SQLite, you can query it directly for ad-hoc analysis:
-
-```bash
-sqlite3 .git/pkgs.sqlite3 "
-  -- who added the most dependencies?
-  SELECT c.author_name, COUNT(*) as deps_added
-  FROM dependency_changes dc
-  JOIN commits c ON dc.commit_id = c.id
-  WHERE dc.change_type = 'added'
-  GROUP BY c.author_name
-  ORDER BY deps_added DESC
-  LIMIT 10;
-"
-```
-
-## Development
-
-```bash
-git clone https://github.com/andrew/git-pkgs
-cd git-pkgs
-bin/setup
-rake test
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions and architecture docs.
 
 ## License
 

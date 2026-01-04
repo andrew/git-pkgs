@@ -1,5 +1,30 @@
 # Contributing
 
+## How it works
+
+git-pkgs walks your git history, extracts dependency files at each commit, and diffs them to detect changes. Results are stored in a SQLite database for fast querying.
+
+The database schema stores:
+- Commits with dependency changes
+- Dependency changes (added/modified/removed) with before/after versions
+- Periodic snapshots of full dependency state for efficient point-in-time queries
+
+See [docs/internals.md](docs/internals.md) for a detailed architecture overview and [docs/schema.md](docs/schema.md) for the database schema.
+
+Since the database is just SQLite, you can query it directly for ad-hoc analysis:
+
+```bash
+sqlite3 .git/pkgs.sqlite3 "
+  SELECT c.author_name, COUNT(*) as deps_added
+  FROM dependency_changes dc
+  JOIN commits c ON dc.commit_id = c.id
+  WHERE dc.change_type = 'added'
+  GROUP BY c.author_name
+  ORDER BY deps_added DESC
+  LIMIT 10;
+"
+```
+
 ## Setup
 
 ```bash

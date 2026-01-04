@@ -1,6 +1,6 @@
 # Database Schema
 
-git-pkgs stores dependency history in a SQLite database at `.git/pkgs.sqlite3`.
+git-pkgs stores dependency history in a SQLite database at `.git/pkgs.sqlite3`. See [internals.md](internals.md) for how the schema is used.
 
 ## Tables
 
@@ -113,17 +113,3 @@ branches ──┬── branch_commits ──┬── commits
            │
            └── last_analyzed_sha (references commits.sha)
 ```
-
-## Design Notes
-
-**Why snapshots?**
-
-Without snapshots, answering "what dependencies existed at commit X" requires replaying all changes from the beginning. With snapshots, it's a single query. The tradeoff is storage space, but SQLite handles this well.
-
-**Why branch_commits?**
-
-Git commits are branch-agnostic. The same commit can appear on multiple branches. This join table tracks which commits belong to which branches and their order, enabling branch-specific queries.
-
-**Platform field duplication**
-
-The platform appears in both `manifests` and `dependency_changes`/`dependency_snapshots`. This denormalization speeds up queries that filter by platform without requiring joins.

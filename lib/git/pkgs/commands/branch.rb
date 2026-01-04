@@ -64,9 +64,13 @@ module Git
 
           info "Analyzing branch: #{branch_name}"
 
+          print "Loading commits..." unless Git::Pkgs.quiet
           walker = repo.walk(branch_name)
           commits = walker.to_a
           total = commits.size
+          print "\rPrefetching diffs..." unless Git::Pkgs.quiet
+          repo.prefetch_blob_paths(commits)
+          print "\r#{' ' * 20}\r" unless Git::Pkgs.quiet
 
           stats = bulk_process_commits(commits, branch, analyzer, total, repo)
 

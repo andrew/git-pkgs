@@ -52,7 +52,7 @@ Processing commit 5191/5191...
 Done!
 Analyzed 5191 commits
 Found 2531 commits with dependency changes
-Stored 28239 snapshots (every 20 changes)
+Stored 28239 snapshots (every 50 changes)
 Blob cache: 3141 unique blobs, 2349 had cache hits
 ```
 
@@ -86,7 +86,7 @@ Snapshot Coverage
 ----------------------------------------
   Commits with dependency changes: 2531
   Commits with snapshots: 127
-  Coverage: 5.0% (1 snapshot per ~20 changes)
+  Coverage: 2.0% (1 snapshot per ~50 changes)
 ```
 
 ### List dependencies
@@ -404,10 +404,10 @@ git config --add pkgs.ignoredFiles test/fixtures/package.json
 Benchmarked on an M1 MacBook Pro analyzing [octobox](https://github.com/octobox/octobox) (5191 commits, 8 years of history): init takes about 18 seconds at roughly 300 commits/sec, producing an 8.3 MB database. About half the commits (2531) had dependency changes.
 
 Optimizations:
-- Bulk inserts with transaction batching (100 commits per transaction)
+- Bulk inserts with transaction batching (500 commits per transaction)
 - Blob SHA caching (75% cache hit rate for repeated manifest content)
 - Deferred index creation during bulk load
-- Sparse snapshots (every 20 dependency-changing commits) for storage efficiency
+- Sparse snapshots (every 50 dependency-changing commits) for storage efficiency
 - SQLite WAL mode for write performance
 
 ## Supported ecosystems

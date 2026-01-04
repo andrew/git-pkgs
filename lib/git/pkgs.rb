@@ -44,7 +44,7 @@ module Git
     class NotInGitRepoError < Error; end
 
     class << self
-      attr_accessor :quiet, :git_dir, :work_tree, :db_path, :batch_size, :snapshot_interval
+      attr_accessor :quiet, :git_dir, :work_tree, :db_path, :batch_size, :snapshot_interval, :threads
 
       def configure_from_env
         @git_dir ||= presence(ENV["GIT_DIR"])
@@ -52,6 +52,7 @@ module Git
         @db_path ||= presence(ENV["GIT_PKGS_DB"])
         @batch_size ||= int_presence(ENV["GIT_PKGS_BATCH_SIZE"])
         @snapshot_interval ||= int_presence(ENV["GIT_PKGS_SNAPSHOT_INTERVAL"])
+        @threads ||= int_presence(ENV["GIT_PKGS_THREADS"])
       end
 
       def reset_config!
@@ -61,6 +62,7 @@ module Git
         @db_path = nil
         @batch_size = nil
         @snapshot_interval = nil
+        @threads = nil
       end
 
       def int_presence(value)

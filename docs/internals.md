@@ -25,6 +25,8 @@ Snapshots exist because replaying thousands of change records to answer "what de
 
 [`Git::Pkgs::Repository`](../lib/git/pkgs/repository.rb) wraps [rugged](https://github.com/libgit2/rugged) (Ruby bindings for [libgit2](https://libgit2.org/)) for git operations. The `walk` method yields commits in topological order. `blob_paths` returns changed files for a commit. `content_at_commit` and `blob_oid_at_commit` fetch file contents and their object IDs. The OID matters for caching: if two commits have the same blob OID for a file, we don't parse it twice.
 
+For large repositories, `prefetch_blob_paths` computes diffs in parallel using multiple threads. This provides roughly 2x speedup on git operations for repos with 1500+ commits. Smaller repos use serial processing because thread creation and mutex synchronization overhead exceeds any parallel gains.
+
 ## Manifest Analysis
 
 [`Git::Pkgs::Analyzer`](../lib/git/pkgs/analyzer.rb) does the actual work of detecting and parsing manifests. It uses the [ecosystems-bibliothecary](https://github.com/ecosyste-ms/bibliothecary) gem, which supports 30+ package managers. Bibliothecary is expensive to call, so the analyzer has a `QUICK_MANIFEST_PATTERNS` regex that filters files before attempting real parsing. This cuts out most commits that touch only source code.
@@ -45,14 +47,14 @@ When you run `git pkgs init` (see [`commands/init.rb`](../lib/git/pkgs/commands/
 
 1. Creates the database schema
 2. Switches to bulk write mode (WAL, synchronous off, large cache)
-3. Walks commits chronologically
+3. Loads all commits and prefetches git diffs in parallel
 4. For each commit with manifest changes, calls `analyzer.analyze_commit`
 5. Batches inserts in transactions of 500 commits
 6. Creates dependency snapshots every 50 commits that changed dependencies
 7. Creates indexes after all data is loaded
 8. Switches back to normal sync mode
 
-Deferring index creation until the end speeds things up considerably. Both batch size and snapshot interval are configurable via environment variables (see Performance Notes below).
+Deferring index creation until the end speeds things up considerably. Batch size, snapshot interval, and thread count are configurable via environment variables (see Performance Notes below).
 
 ## Incremental Updates
 
@@ -141,7 +143,8 @@ ActiveRecord models live in [`lib/git/pkgs/models/`](../lib/git/pkgs/models/). T
 
 Typical init speed is around 75-300 commits per second depending on the repository. The main bottlenecks are git blob reads and bibliothecary parsing. The blob OID cache helps a lot: if a Gemfile hasn't changed in 50 commits, we parse it once and reuse the result. The manifest path regex filter also helps by skipping commits that only touch source files.
 
-For repositories with long histories, the database file can grow to tens of megabytes. The periodic snapshots trade storage for query speed. Two environment variables let you tune this:
+For repositories with long histories, the database file can grow to tens of megabytes. The periodic snapshots trade storage for query speed. Three environment variables let you tune performance:
 
 - `GIT_PKGS_BATCH_SIZE` - Number of commits per database transaction (default: 500). Larger batches reduce transaction overhead but use more memory.
 - `GIT_PKGS_SNAPSHOT_INTERVAL` - Store full dependency state every N commits with changes (default: 50). Lower values speed up point-in-time queries but increase database size.
+- `GIT_PKGS_THREADS` - Number of threads for parallel git diff prefetching (default: 4). Set to 1 to disable parallelism. On large repositories (1500+ commits), parallel prefetching provides roughly 2x speedup on git operations.

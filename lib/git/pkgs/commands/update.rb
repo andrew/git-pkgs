@@ -50,6 +50,8 @@ module Git
           walker = repo.walk(branch_name, since_sha)
           commits = walker.to_a
           total = commits.size
+          repo.prefetch_blob_paths(commits)
+
           processed = 0
           dependency_commits = 0
           last_position = Models::BranchCommit.where(branch: branch).maximum(:position) || 0

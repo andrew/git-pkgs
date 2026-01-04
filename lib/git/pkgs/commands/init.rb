@@ -47,6 +47,8 @@ module Git
           walker = repo.walk(branch_name, @options[:since])
           commits = walker.to_a
           total = commits.size
+          print "\rPrefetching diffs..." unless Git::Pkgs.quiet
+          repo.prefetch_blob_paths(commits)
           print "\r#{' ' * 20}\r" unless Git::Pkgs.quiet
 
           stats = bulk_process_commits(commits, branch, analyzer, total)

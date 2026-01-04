@@ -10,6 +10,7 @@ module Git
       def initialize(path = nil)
         @path = path || Git::Pkgs.git_dir || Git::Pkgs.work_tree || Dir.pwd
         @rugged = Rugged::Repository.new(@path)
+        @blob_paths_cache = {}
       end
 
       def git_dir
@@ -62,7 +63,40 @@ module Git
         @rugged.lookup(sha)
       end
 
+      DEFAULT_THREADS = 4
+
+      def prefetch_blob_paths(commits)
+        thread_count = Git::Pkgs.threads || DEFAULT_THREADS
+
+        # Serial is faster for small repos due to thread overhead
+        if commits.size < 1500 || thread_count <= 1
+          commits.each { |c| @blob_paths_cache[c.oid] = compute_blob_paths(c) }
+          return
+        end
+
+        queue = Queue.new
+        mutex = Mutex.new
+
+        commits.each { |c| queue << c }
+        thread_count.times { queue << nil }
+
+        thread_pool = thread_count.times.map do
+          Thread.new do
+            while (commit = queue.pop)
+              paths = compute_blob_paths(commit)
+              mutex.synchronize { @blob_paths_cache[commit.oid] = paths }
+            end
+          end
+        end
+
+        thread_pool.each(&:join)
+      end
+
       def blob_paths(rugged_commit)
+        @blob_paths_cache[rugged_commit.oid] || compute_blob_paths(rugged_commit)
+      end
+
+      def compute_blob_paths(rugged_commit)
         paths = []
 
         if rugged_commit.parents.empty?

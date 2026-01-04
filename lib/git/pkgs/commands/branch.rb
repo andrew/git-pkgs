@@ -6,8 +6,16 @@ module Git
       class Branch
         include Output
 
-        BATCH_SIZE = 100
-        SNAPSHOT_INTERVAL = 20
+        DEFAULT_BATCH_SIZE = 500
+        DEFAULT_SNAPSHOT_INTERVAL = 50
+
+        def batch_size
+          Git::Pkgs.batch_size || DEFAULT_BATCH_SIZE
+        end
+
+        def snapshot_interval
+          Git::Pkgs.snapshot_interval || DEFAULT_SNAPSHOT_INTERVAL
+        end
 
         def initialize(args)
           @args = args
@@ -247,7 +255,7 @@ module Git
 
               snapshot = result[:snapshot]
 
-              if dependency_commit_count % SNAPSHOT_INTERVAL == 0
+              if dependency_commit_count % snapshot_interval == 0
                 snapshot.each do |(manifest_path, name), dep_info|
                   pending_snapshots << {
                     sha: rugged_commit.oid,
@@ -262,7 +270,7 @@ module Git
               end
             end
 
-            flush.call if pending_commits.size >= BATCH_SIZE
+            flush.call if pending_commits.size >= batch_size
           end
 
           if snapshot.any?

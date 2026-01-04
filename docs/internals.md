@@ -19,7 +19,7 @@ The schema has six main tables:
 - `dependency_changes` records every add, modify, or remove event
 - `dependency_snapshots` stores full dependency state at intervals
 
-Snapshots exist because replaying thousands of change records to answer "what dependencies existed at commit X?" would be slow. Instead, we store the complete dependency set every 20 commits (`SNAPSHOT_INTERVAL`). Point-in-time queries find the nearest snapshot and replay only the changes since then.
+Snapshots exist because replaying thousands of change records to answer "what dependencies existed at commit X?" would be slow. Instead, we store the complete dependency set every 50 commits by default. Point-in-time queries find the nearest snapshot and replay only the changes since then.
 
 ## Git Access
 
@@ -47,12 +47,12 @@ When you run `git pkgs init` (see [`commands/init.rb`](../lib/git/pkgs/commands/
 2. Switches to bulk write mode (WAL, synchronous off, large cache)
 3. Walks commits chronologically
 4. For each commit with manifest changes, calls `analyzer.analyze_commit`
-5. Batches inserts in transactions of 100 commits
-6. Creates dependency snapshots every 20 commits that changed dependencies
+5. Batches inserts in transactions of 500 commits
+6. Creates dependency snapshots every 50 commits that changed dependencies
 7. Creates indexes after all data is loaded
 8. Switches back to normal sync mode
 
-Deferring index creation until the end speeds things up considerably. The batch size of 100 is a balance between transaction overhead and memory usage.
+Deferring index creation until the end speeds things up considerably. Both batch size and snapshot interval are configurable via environment variables (see Performance Notes below).
 
 ## Incremental Updates
 
@@ -139,6 +139,9 @@ ActiveRecord models live in [`lib/git/pkgs/models/`](../lib/git/pkgs/models/). T
 
 ## Performance Notes
 
-Typical init speed is around 300 commits per second. The main bottlenecks are git blob reads and bibliothecary parsing. The blob OID cache helps a lot: if a Gemfile hasn't changed in 50 commits, we parse it once and reuse the result. The manifest path regex filter also helps by skipping commits that only touch source files.
+Typical init speed is around 75-300 commits per second depending on the repository. The main bottlenecks are git blob reads and bibliothecary parsing. The blob OID cache helps a lot: if a Gemfile hasn't changed in 50 commits, we parse it once and reuse the result. The manifest path regex filter also helps by skipping commits that only touch source files.
 
-For repositories with long histories, the database file can grow to tens of megabytes. The periodic snapshots trade storage for query speed. You could tune `SNAPSHOT_INTERVAL` if you care more about one than the other.
+For repositories with long histories, the database file can grow to tens of megabytes. The periodic snapshots trade storage for query speed. Two environment variables let you tune this:
+
+- `GIT_PKGS_BATCH_SIZE` - Number of commits per database transaction (default: 500). Larger batches reduce transaction overhead but use more memory.
+- `GIT_PKGS_SNAPSHOT_INTERVAL` - Store full dependency state every N commits with changes (default: 50). Lower values speed up point-in-time queries but increase database size.

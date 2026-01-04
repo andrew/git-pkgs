@@ -6,8 +6,16 @@ module Git
       class Init
         include Output
 
-        BATCH_SIZE = 100
-        SNAPSHOT_INTERVAL = 20 # Store snapshot every N dependency-changing commits
+        DEFAULT_BATCH_SIZE = 500
+        DEFAULT_SNAPSHOT_INTERVAL = 50
+
+        def batch_size
+          Git::Pkgs.batch_size || DEFAULT_BATCH_SIZE
+        end
+
+        def snapshot_interval
+          Git::Pkgs.snapshot_interval || DEFAULT_SNAPSHOT_INTERVAL
+        end
 
         def initialize(args)
           @args = args
@@ -35,15 +43,17 @@ module Git
 
           info "Analyzing branch: #{branch_name}"
 
+          print "Loading commits..." unless Git::Pkgs.quiet
           walker = repo.walk(branch_name, @options[:since])
           commits = walker.to_a
           total = commits.size
+          print "\r#{' ' * 20}\r" unless Git::Pkgs.quiet
 
           stats = bulk_process_commits(commits, branch, analyzer, total)
 
           branch.update(last_analyzed_sha: repo.branch_target(branch_name))
 
-          print "\rCreating indexes..." unless Git::Pkgs.quiet
+          print "\rCreating indexes...#{' ' * 20}" unless Git::Pkgs.quiet
           Database.create_bulk_indexes
           Database.optimize_for_reads
 
@@ -52,7 +62,7 @@ module Git
           info "\rDone!#{' ' * 20}"
           info "Analyzed #{total} commits"
           info "Found #{stats[:dependency_commits]} commits with dependency changes"
-          info "Stored #{stats[:snapshots_stored]} snapshots (every #{SNAPSHOT_INTERVAL} changes)"
+          info "Stored #{stats[:snapshots_stored]} snapshots (every #{snapshot_interval} changes)"
           info "Blob cache: #{cache_stats[:cached_blobs]} unique blobs, #{cache_stats[:blobs_with_hits]} had cache hits"
 
           unless @options[:no_hooks]
@@ -135,9 +145,11 @@ module Git
             pending_snapshots.clear
           end
 
+          progress_interval = [total / 100, 10].max
+
           commits.each do |rugged_commit|
             processed += 1
-            print "\rProcessing commit #{processed}/#{total}..." if !Git::Pkgs.quiet && (processed % 50 == 0 || processed == total)
+            print "\rProcessing commit #{processed}/#{total}..." if !Git::Pkgs.quiet && (processed % progress_interval == 0 || processed == total)
 
             next if rugged_commit.parents.length > 1 # skip merge commits
 
@@ -191,7 +203,7 @@ module Git
               snapshot = result[:snapshot]
 
               # Store snapshot at intervals
-              if dependency_commit_count % SNAPSHOT_INTERVAL == 0
+              if dependency_commit_count % snapshot_interval == 0
                 snapshot.each do |(manifest_path, name), dep_info|
                   pending_snapshots << {
                     sha: rugged_commit.oid,
@@ -206,7 +218,7 @@ module Git
               end
             end
 
-            flush.call if pending_commits.size >= BATCH_SIZE
+            flush.call if pending_commits.size >= batch_size
           end
 
           # Always store final snapshot for the last processed commit

@@ -34,5 +34,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency "rugged", "~> 1.0"
   spec.add_dependency "activerecord", ">= 7.0"
   spec.add_dependency "sqlite3", ">= 2.0"
-  spec.add_dependency "ecosystems-bibliothecary"
+  spec.add_dependency "ecosystems-bibliothecary", "~> 15.0"
 end

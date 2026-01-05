@@ -56,13 +56,11 @@ module Git
           dependency_commits = 0
           last_position = Models::BranchCommit.where(branch: branch).max(:position) || 0
 
-          info "Updating branch: #{branch_name}"
-          info "Found #{total} new commits"
+          print "Updating #{branch_name}..." unless Git::Pkgs.quiet
 
           Database.db.transaction do
             commits.each do |rugged_commit|
               processed += 1
-              print "\rProcessing commit #{processed}/#{total}..." unless Git::Pkgs.quiet
 
               result = analyzer.analyze_commit(rugged_commit, snapshot)
 
@@ -117,9 +115,7 @@ module Git
             branch.update(last_analyzed_sha: current_sha)
           end
 
-          info "\nDone!"
-          info "Processed #{total} new commits"
-          info "Found #{dependency_commits} commits with dependency changes"
+          info "\r#{' ' * 40}\rUpdated #{branch_name}: #{total} commits (#{dependency_commits} with dependency changes)"
         end
 
         def parse_options

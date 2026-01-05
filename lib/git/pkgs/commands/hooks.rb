@@ -31,32 +31,32 @@ module Git
           end
         end
 
-        def install_hooks(repo)
+        def install_hooks(repo, quiet: false)
           hooks_dir = File.join(repo.git_dir, "hooks")
+          installed = []
 
           HOOKS.each do |hook_name|
             hook_path = File.join(hooks_dir, hook_name)
 
             if File.exist?(hook_path)
               content = File.read(hook_path)
-              if content.include?("git-pkgs")
-                info "Hook #{hook_name} already contains git-pkgs"
-                next
-              end
+              next if content.include?("git-pkgs")
 
               File.open(hook_path, "a") do |f|
                 f.puts "\n# git-pkgs auto-update"
                 f.puts "git pkgs update 2>/dev/null || true"
               end
-              info "Appended git-pkgs to existing #{hook_name} hook"
+              installed << hook_name
             else
               File.write(hook_path, HOOK_SCRIPT)
               File.chmod(0o755, hook_path)
-              info "Created #{hook_name} hook"
+              installed << hook_name
             end
           end
 
-          info "Hooks installed successfully"
+          return if quiet || installed.empty?
+
+          info "Installed hooks: #{installed.join(', ')}"
         end
 
         def uninstall_hooks(repo)

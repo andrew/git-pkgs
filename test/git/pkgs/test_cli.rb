@@ -57,6 +57,7 @@ class Git::Pkgs::TestDiffCommand < Minitest::Test
   include TestHelpers
 
   def setup
+    Git::Pkgs::Database.disconnect
     create_test_repo
     add_file("Gemfile", "source 'https://rubygems.org'\ngem 'rails'")
     commit("Initial commit")
@@ -146,6 +147,152 @@ class Git::Pkgs::TestDiffCommand < Minitest::Test
     result = Git::Pkgs::Models::Commit.find_or_create_from_repo(repo, "0000000000000000000000000000000000000000")
 
     assert_nil result
+  end
+
+  def test_diff_shows_added_modified_removed
+    repo = Git::Pkgs::Repository.new(@test_dir)
+    head_sha = repo.head_sha
+    parent_sha = repo.rev_parse("HEAD~1")
+
+    # Create commits in database
+    parent_commit = Git::Pkgs::Models::Commit.create(
+      sha: parent_sha, message: "Initial",
+      author_name: "Test", author_email: "test@example.com",
+      committed_at: Time.now - 3600
+    )
+    head_commit = Git::Pkgs::Models::Commit.create(
+      sha: head_sha, message: "Add puma",
+      author_name: "Test", author_email: "test@example.com",
+      committed_at: Time.now
+    )
+
+    manifest = Git::Pkgs::Models::Manifest.find_or_create(path: "Gemfile", ecosystem: "rubygems", kind: "manifest")
+
+    Git::Pkgs::Models::DependencyChange.create(
+      commit: head_commit, manifest: manifest, name: "puma",
+      change_type: "added", ecosystem: "rubygems", requirement: "~> 5.0"
+    )
+    Git::Pkgs::Models::DependencyChange.create(
+      commit: head_commit, manifest: manifest, name: "rails",
+      change_type: "modified", ecosystem: "rubygems", requirement: "~> 7.1",
+      previous_requirement: "~> 7.0"
+    )
+    Git::Pkgs::Models::DependencyChange.create(
+      commit: head_commit, manifest: manifest, name: "sidekiq",
+      change_type: "removed", ecosystem: "rubygems", requirement: "~> 6.0"
+    )
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Diff.new(["#{parent_sha}..#{head_sha}"]).run
+      end
+    end
+
+    assert_includes output, "Added:"
+    assert_includes output, "puma"
+    assert_includes output, "Modified:"
+    assert_includes output, "rails"
+    assert_includes output, "Removed:"
+    assert_includes output, "sidekiq"
+    assert_includes output, "Summary:"
+  end
+
+  def test_diff_no_changes
+    repo = Git::Pkgs::Repository.new(@test_dir)
+    head_sha = repo.head_sha
+    parent_sha = repo.rev_parse("HEAD~1")
+
+    # Create commits without any dependency changes
+    Git::Pkgs::Models::Commit.create(
+      sha: parent_sha, message: "Initial",
+      author_name: "Test", author_email: "test@example.com",
+      committed_at: Time.now - 3600
+    )
+    Git::Pkgs::Models::Commit.create(
+      sha: head_sha, message: "Add puma",
+      author_name: "Test", author_email: "test@example.com",
+      committed_at: Time.now
+    )
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Diff.new(["#{parent_sha}..#{head_sha}"]).run
+      end
+    end
+
+    assert_includes output, "No dependency changes"
+  end
+
+  def test_diff_filters_by_ecosystem
+    repo = Git::Pkgs::Repository.new(@test_dir)
+    head_sha = repo.head_sha
+    parent_sha = repo.rev_parse("HEAD~1")
+
+    parent_commit = Git::Pkgs::Models::Commit.create(
+      sha: parent_sha, message: "Initial",
+      author_name: "Test", author_email: "test@example.com",
+      committed_at: Time.now - 3600
+    )
+    head_commit = Git::Pkgs::Models::Commit.create(
+      sha: head_sha, message: "Add deps",
+      author_name: "Test", author_email: "test@example.com",
+      committed_at: Time.now
+    )
+
+    manifest = Git::Pkgs::Models::Manifest.find_or_create(path: "Gemfile", ecosystem: "rubygems", kind: "manifest")
+    Git::Pkgs::Models::DependencyChange.create(
+      commit: head_commit, manifest: manifest, name: "rails",
+      change_type: "added", ecosystem: "rubygems", requirement: "~> 7.0"
+    )
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Diff.new(["#{parent_sha}..#{head_sha}", "--ecosystem=npm"]).run
+      end
+    end
+
+    assert_includes output, "No dependency changes"
+  end
+
+  def test_diff_with_from_to_options
+    repo = Git::Pkgs::Repository.new(@test_dir)
+    head_sha = repo.head_sha
+    parent_sha = repo.rev_parse("HEAD~1")
+
+    parent_commit = Git::Pkgs::Models::Commit.create(
+      sha: parent_sha, message: "Initial",
+      author_name: "Test", author_email: "test@example.com",
+      committed_at: Time.now - 3600
+    )
+    head_commit = Git::Pkgs::Models::Commit.create(
+      sha: head_sha, message: "Add puma",
+      author_name: "Test", author_email: "test@example.com",
+      committed_at: Time.now
+    )
+
+    manifest = Git::Pkgs::Models::Manifest.find_or_create(path: "Gemfile", ecosystem: "rubygems", kind: "manifest")
+    Git::Pkgs::Models::DependencyChange.create(
+      commit: head_commit, manifest: manifest, name: "puma",
+      change_type: "added", ecosystem: "rubygems", requirement: "~> 5.0"
+    )
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Diff.new(["--from=#{parent_sha}", "--to=#{head_sha}"]).run
+      end
+    end
+
+    assert_includes output, "puma"
+    assert_includes output, "Added:"
+  end
+
+  def capture_stdout
+    original = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = original
   end
 end
 
@@ -282,6 +429,7 @@ class Git::Pkgs::TestHistoryCommand < Minitest::Test
   include TestHelpers
 
   def setup
+    Git::Pkgs::Database.disconnect
     create_test_repo
     add_file("Gemfile", "source 'https://rubygems.org'\ngem 'rails'")
     commit("Add rails")
@@ -466,6 +614,7 @@ class Git::Pkgs::TestStatsCommand < Minitest::Test
   include TestHelpers
 
   def setup
+    Git::Pkgs::Database.disconnect
     create_test_repo
     add_file("Gemfile", "source 'https://rubygems.org'\ngem 'rails'")
     commit("Add rails")
@@ -668,6 +817,160 @@ class Git::Pkgs::TestStatsCommand < Minitest::Test
     commit
   end
 
+  def test_stats_default_with_current_dependencies
+    # Create branch with snapshot to test current_dependencies output
+    sha = SecureRandom.hex(20)
+    commit = Git::Pkgs::Models::Commit.create(
+      sha: sha,
+      message: "Test",
+      author_name: "alice",
+      author_email: "alice@example.com",
+      committed_at: Time.now,
+      has_dependency_changes: true
+    )
+
+    branch = Git::Pkgs::Models::Branch.create(name: "main", last_analyzed_sha: sha)
+    Git::Pkgs::Models::BranchCommit.create(branch: branch, commit: commit, position: 1)
+
+    manifest = Git::Pkgs::Models::Manifest.find_or_create(path: "Gemfile", ecosystem: "rubygems", kind: "manifest")
+
+    Git::Pkgs::Models::DependencySnapshot.create(
+      commit: commit, manifest: manifest, name: "rails",
+      ecosystem: "rubygems", requirement: "~> 7.0", dependency_type: "runtime"
+    )
+    Git::Pkgs::Models::DependencySnapshot.create(
+      commit: commit, manifest: manifest, name: "rspec",
+      ecosystem: "rubygems", requirement: "~> 3.0", dependency_type: "development"
+    )
+
+    Git::Pkgs::Models::DependencyChange.create(
+      commit: commit, manifest: manifest, name: "rails",
+      change_type: "added", ecosystem: "rubygems", requirement: "~> 7.0"
+    )
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Stats.new([]).run
+      end
+    end
+
+    assert_includes output, "Current Dependencies"
+    assert_includes output, "Total: 2"
+    assert_includes output, "rubygems: 2"
+    assert_includes output, "By type:"
+    assert_includes output, "runtime: 1"
+    assert_includes output, "development: 1"
+  end
+
+  def test_stats_filters_by_ecosystem
+    create_commit_with_author("alice", "alice@example.com", [
+      { name: "rails", change_type: "added" }
+    ])
+
+    # Create npm change
+    sha = SecureRandom.hex(20)
+    commit = Git::Pkgs::Models::Commit.create(
+      sha: sha, message: "Add npm", author_name: "bob",
+      author_email: "bob@example.com", committed_at: Time.now, has_dependency_changes: true
+    )
+    npm_manifest = Git::Pkgs::Models::Manifest.find_or_create(path: "package.json", ecosystem: "npm", kind: "manifest")
+    Git::Pkgs::Models::DependencyChange.create(
+      commit: commit, manifest: npm_manifest, name: "express",
+      change_type: "added", ecosystem: "npm", requirement: "^4.0"
+    )
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Stats.new(["--ecosystem=rubygems"]).run
+      end
+    end
+
+    assert_includes output, "Ecosystem: rubygems"
+    assert_includes output, "rails"
+    refute_includes output, "express"
+  end
+
+  def test_stats_by_author_empty_result
+    # No commits with added dependencies
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Stats.new(["--by-author"]).run
+      end
+    end
+
+    assert_includes output, "No dependency additions found"
+  end
+
+  def test_stats_by_author_filters_by_ecosystem
+    create_commit_with_author("alice", "alice@example.com", [
+      { name: "rails", change_type: "added" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Stats.new(["--by-author", "--ecosystem=npm"]).run
+      end
+    end
+
+    assert_includes output, "No dependency additions found"
+  end
+
+  def test_stats_shows_manifest_files
+    create_commit_with_author("alice", "alice@example.com", [
+      { name: "rails", change_type: "added" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Stats.new([]).run
+      end
+    end
+
+    assert_includes output, "Manifest Files"
+    assert_includes output, "Gemfile"
+    assert_includes output, "1 changes"
+  end
+
+  def test_stats_shows_top_authors
+    create_commit_with_author("alice", "alice@example.com", [
+      { name: "rails", change_type: "added" },
+      { name: "puma", change_type: "added" }
+    ])
+    create_commit_with_author("bob", "bob@example.com", [
+      { name: "sidekiq", change_type: "added" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Stats.new([]).run
+      end
+    end
+
+    assert_includes output, "Top Authors"
+    assert_includes output, "alice"
+    assert_includes output, "bob"
+  end
+
+  def test_stats_shows_changes_by_type
+    create_commit_with_author("alice", "alice@example.com", [
+      { name: "rails", change_type: "added" },
+      { name: "puma", change_type: "modified" },
+      { name: "sidekiq", change_type: "removed" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Stats.new([]).run
+      end
+    end
+
+    assert_includes output, "Dependency Changes"
+    assert_includes output, "Total changes: 3"
+    assert_includes output, "added:"
+    assert_includes output, "modified:"
+    assert_includes output, "removed:"
+  end
+
   def capture_stdout
     original = $stdout
     $stdout = StringIO.new
@@ -794,6 +1097,7 @@ class Git::Pkgs::TestInfoCommand < Minitest::Test
   include TestHelpers
 
   def setup
+    Git::Pkgs::Database.disconnect
     create_test_repo
     add_file("Gemfile", "source 'https://rubygems.org'\ngem 'rails'")
     commit("Add rails")
@@ -868,6 +1172,74 @@ class Git::Pkgs::TestInfoCommand < Minitest::Test
     assert_includes output, "Coverage: 100.0%"
   end
 
+  def test_info_shows_database_location_and_size
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Info.new([]).run
+      end
+    end
+
+    assert_includes output, "Database Info"
+    assert_includes output, "Location:"
+    assert_includes output, "pkgs.sqlite3"
+    assert_includes output, "Size:"
+  end
+
+  def test_info_shows_row_counts
+    Git::Pkgs::Models::Commit.create(
+      sha: SecureRandom.hex(20), message: "Test",
+      author_name: "Test", author_email: "test@example.com", committed_at: Time.now
+    )
+    Git::Pkgs::Models::Manifest.create(path: "Gemfile", ecosystem: "rubygems", kind: "manifest")
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Info.new([]).run
+      end
+    end
+
+    assert_includes output, "Row Counts"
+    assert_includes output, "Branches"
+    assert_includes output, "Commits"
+    assert_includes output, "Manifests"
+    assert_includes output, "Dependency Changes"
+    assert_includes output, "Total"
+  end
+
+  def test_info_shows_branch_info
+    sha = SecureRandom.hex(20)
+    commit = Git::Pkgs::Models::Commit.create(
+      sha: sha, message: "Test",
+      author_name: "Test", author_email: "test@example.com", committed_at: Time.now
+    )
+    branch = Git::Pkgs::Models::Branch.create(name: "main", last_analyzed_sha: sha)
+    Git::Pkgs::Models::BranchCommit.create(branch: branch, commit: commit, position: 1)
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Info.new([]).run
+      end
+    end
+
+    assert_includes output, "Branches"
+    assert_includes output, "main:"
+    assert_includes output, "1 commits"
+    assert_includes output, sha[0, 7]
+  end
+
+  def test_info_ecosystems_flag
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Info.new(["--ecosystems"]).run
+      end
+    end
+
+    assert_includes output, "Available Ecosystems"
+    assert_includes output, "Enabled:"
+    assert_includes output, "rubygems"
+    assert_includes output, "npm"
+  end
+
   def capture_stdout
     original = $stdout
     $stdout = StringIO.new
@@ -882,6 +1254,7 @@ class Git::Pkgs::TestWhereCommand < Minitest::Test
   include TestHelpers
 
   def setup
+    Git::Pkgs::Database.disconnect
     create_test_repo
     add_file("Gemfile", sample_gemfile({ "rails" => "~> 7.0", "puma" => "~> 5.0" }))
     commit("Add dependencies")
@@ -982,6 +1355,7 @@ class Git::Pkgs::TestSchemaCommand < Minitest::Test
   include TestHelpers
 
   def setup
+    Git::Pkgs::Database.disconnect
     create_test_repo
     add_file("Gemfile", "source 'https://rubygems.org'\ngem 'rails'")
     commit("Add rails")
@@ -1053,20 +1427,119 @@ class Git::Pkgs::TestSchemaCommand < Minitest::Test
   end
 end
 
-class Git::Pkgs::TestSearchCommand < Minitest::Test
+# Shared test base for command integration tests
+class Git::Pkgs::CommandTestBase < Minitest::Test
   include TestHelpers
 
   def setup
+    Git::Pkgs::Database.disconnect
     create_test_repo
     add_file("Gemfile", "source 'https://rubygems.org'\ngem 'rails'")
     commit("Add rails")
     @git_dir = File.join(@test_dir, ".git")
-    Git::Pkgs::Database.connect(@git_dir)
+
+    # Delete any existing database and create fresh
+    db_path = File.join(@git_dir, "pkgs.sqlite3")
+    File.delete(db_path) if File.exist?(db_path)
+
+    Git::Pkgs::Database.connect(@git_dir, check_version: false)
     Git::Pkgs::Database.create_schema
   end
 
   def teardown
     cleanup_test_repo
+  end
+
+  def create_commit_with_changes(author, changes, message: "Test commit", committed_at: Time.now)
+    sha = SecureRandom.hex(20)
+    commit = Git::Pkgs::Models::Commit.create(
+      sha: sha,
+      message: message,
+      author_name: author,
+      author_email: "#{author}@example.com",
+      committed_at: committed_at,
+      has_dependency_changes: changes.any?
+    )
+
+    manifest = Git::Pkgs::Models::Manifest.find_or_create(
+      path: "Gemfile",
+      ecosystem: "rubygems",
+      kind: "manifest"
+    )
+
+    changes.each do |change|
+      Git::Pkgs::Models::DependencyChange.create(
+        commit: commit,
+        manifest: manifest,
+        name: change[:name],
+        change_type: change[:change_type],
+        requirement: change[:requirement] || ">= 0",
+        ecosystem: "rubygems",
+        dependency_type: change[:dependency_type] || "runtime"
+      )
+    end
+
+    commit
+  end
+
+  def create_branch_with_snapshot(branch_name, commit, dependencies)
+    branch = Git::Pkgs::Models::Branch.create(name: branch_name, last_analyzed_sha: commit.sha)
+    Git::Pkgs::Models::BranchCommit.create(branch: branch, commit: commit, position: 1)
+
+    manifest = Git::Pkgs::Models::Manifest.find_or_create(
+      path: "Gemfile",
+      ecosystem: "rubygems",
+      kind: "manifest"
+    )
+
+    dependencies.each do |dep|
+      Git::Pkgs::Models::DependencySnapshot.create(
+        commit: commit,
+        manifest: manifest,
+        name: dep[:name],
+        ecosystem: "rubygems",
+        requirement: dep[:requirement] || ">= 0",
+        dependency_type: dep[:dependency_type] || "runtime"
+      )
+    end
+
+    branch
+  end
+
+  def capture_stdout
+    original = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = original
+  end
+
+  def capture_stderr
+    original = $stderr
+    $stderr = StringIO.new
+    yield
+    $stderr.string
+  ensure
+    $stderr = original
+  end
+end
+
+class Git::Pkgs::TestSearchCommand < Git::Pkgs::CommandTestBase
+  def test_search_finds_matching_dependencies
+    create_commit_with_changes("alice", [
+      { name: "rails", change_type: "added" },
+      { name: "railties", change_type: "added" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Search.new(["rail"]).run
+      end
+    end
+
+    assert_includes output, "rails"
+    assert_includes output, "railties"
   end
 
   def test_search_not_found
@@ -1089,39 +1562,35 @@ class Git::Pkgs::TestSearchCommand < Minitest::Test
     end
   end
 
-  def capture_stdout
-    original = $stdout
-    $stdout = StringIO.new
-    yield
-    $stdout.string
-  ensure
-    $stdout = original
-  end
+  def test_search_filters_by_ecosystem
+    create_commit_with_changes("alice", [{ name: "rails", change_type: "added" }])
 
-  def capture_stderr
-    original = $stderr
-    $stderr = StringIO.new
-    yield
-    $stderr.string
-  ensure
-    $stderr = original
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Search.new(["rails", "--ecosystem=npm"]).run
+      end
+    end
+
+    assert_includes output, "No dependencies found"
   end
 end
 
-class Git::Pkgs::TestWhyCommand < Minitest::Test
-  include TestHelpers
+class Git::Pkgs::TestWhyCommand < Git::Pkgs::CommandTestBase
+  def test_why_shows_when_package_was_added
+    create_commit_with_changes("alice", [
+      { name: "rails", change_type: "added", requirement: "~> 7.0" }
+    ], message: "Add rails for web framework")
 
-  def setup
-    create_test_repo
-    add_file("Gemfile", "source 'https://rubygems.org'\ngem 'rails'")
-    commit("Add rails")
-    @git_dir = File.join(@test_dir, ".git")
-    Git::Pkgs::Database.connect(@git_dir)
-    Git::Pkgs::Database.create_schema
-  end
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Why.new(["rails"]).run
+      end
+    end
 
-  def teardown
-    cleanup_test_repo
+    assert_includes output, "rails was added"
+    assert_includes output, "alice"
+    assert_includes output, "Add rails for web framework"
+    assert_includes output, "~> 7.0"
   end
 
   def test_why_package_not_found
@@ -1134,32 +1603,218 @@ class Git::Pkgs::TestWhyCommand < Minitest::Test
     assert_includes output, "not found"
   end
 
-  def capture_stdout
-    original = $stdout
-    $stdout = StringIO.new
-    yield
-    $stdout.string
-  ensure
-    $stdout = original
+  def test_why_finds_earliest_add
+    old_time = Time.now - (30 * 24 * 60 * 60)
+    recent_time = Time.now - (5 * 24 * 60 * 60)
+
+    create_commit_with_changes("alice", [
+      { name: "rails", change_type: "added" }
+    ], committed_at: old_time)
+
+    create_commit_with_changes("bob", [
+      { name: "rails", change_type: "modified" }
+    ], committed_at: recent_time)
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Why.new(["rails"]).run
+      end
+    end
+
+    assert_includes output, "alice"
+    refute_includes output, "bob"
   end
 end
 
-class Git::Pkgs::TestHooksCommand < Minitest::Test
-  include TestHelpers
+class Git::Pkgs::TestBlameCommand < Git::Pkgs::CommandTestBase
+  def test_blame_shows_who_added_dependencies
+    commit = create_commit_with_changes("alice", [
+      { name: "rails", change_type: "added", requirement: "~> 7.0" }
+    ])
+    create_branch_with_snapshot("main", commit, [
+      { name: "rails", requirement: "~> 7.0" }
+    ])
 
-  def setup
-    create_test_repo
-    add_file("Gemfile", "source 'https://rubygems.org'\ngem 'rails'")
-    commit("Add rails")
-    @git_dir = File.join(@test_dir, ".git")
-    Git::Pkgs::Database.connect(@git_dir)
-    Git::Pkgs::Database.create_schema
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Blame.new([]).run
+      end
+    end
+
+    assert_includes output, "rails"
+    assert_includes output, "alice"
   end
 
-  def teardown
-    cleanup_test_repo
+  def test_blame_json_format
+    commit = create_commit_with_changes("alice", [
+      { name: "rails", change_type: "added", requirement: "~> 7.0" }
+    ])
+    create_branch_with_snapshot("main", commit, [
+      { name: "rails", requirement: "~> 7.0" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Blame.new(["--format=json"]).run
+      end
+    end
+
+    data = JSON.parse(output)
+    assert_equal 1, data.length
+    assert_equal "rails", data.first["name"]
+    assert_equal "alice", data.first["author"]
   end
 
+  def test_blame_prefers_human_over_bot
+    commit = create_commit_with_changes("dependabot[bot]", [
+      { name: "rails", change_type: "added" }
+    ], message: "Bump rails\n\nCo-authored-by: Alice <alice@example.com>")
+    create_branch_with_snapshot("main", commit, [{ name: "rails" }])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Blame.new([]).run
+      end
+    end
+
+    assert_includes output, "Alice"
+  end
+end
+
+class Git::Pkgs::TestListCommand < Git::Pkgs::CommandTestBase
+  def test_list_shows_dependencies_at_commit
+    commit = create_commit_with_changes("alice", [
+      { name: "rails", change_type: "added", requirement: "~> 7.0" }
+    ])
+    create_branch_with_snapshot("main", commit, [
+      { name: "rails", requirement: "~> 7.0", dependency_type: "runtime" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::List.new(["--commit=#{commit.sha}"]).run
+      end
+    end
+
+    assert_includes output, "Gemfile"
+    assert_includes output, "rails"
+    assert_includes output, "~> 7.0"
+  end
+
+  def test_list_json_format
+    commit = create_commit_with_changes("alice", [
+      { name: "rails", change_type: "added", requirement: "~> 7.0" }
+    ])
+    create_branch_with_snapshot("main", commit, [
+      { name: "rails", requirement: "~> 7.0" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::List.new(["--commit=#{commit.sha}", "--format=json"]).run
+      end
+    end
+
+    data = JSON.parse(output)
+    assert_equal 1, data.length
+    assert_equal "rails", data.first["name"]
+    assert_equal "~> 7.0", data.first["requirement"]
+  end
+
+  def test_list_filters_by_ecosystem
+    commit = create_commit_with_changes("alice", [
+      { name: "rails", change_type: "added" }
+    ])
+    create_branch_with_snapshot("main", commit, [{ name: "rails" }])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::List.new(["--commit=#{commit.sha}", "--ecosystem=npm"]).run
+      end
+    end
+
+    assert_includes output, "No dependencies found"
+  end
+end
+
+class Git::Pkgs::TestStaleCommand < Git::Pkgs::CommandTestBase
+  def test_stale_shows_dependencies_by_last_update
+    old_time = Time.now - (100 * 24 * 60 * 60)  # 100 days ago
+    commit = create_commit_with_changes("alice", [
+      { name: "rails", change_type: "added", requirement: "~> 7.0" }
+    ], committed_at: old_time)
+    create_branch_with_snapshot("main", commit, [
+      { name: "rails", requirement: "~> 7.0" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Stale.new([]).run
+      end
+    end
+
+    assert_includes output, "rails"
+    assert_includes output, "days ago"
+  end
+
+  def test_stale_filters_by_days
+    recent_time = Time.now - (5 * 24 * 60 * 60)  # 5 days ago
+    commit = create_commit_with_changes("alice", [
+      { name: "rails", change_type: "added" }
+    ], committed_at: recent_time)
+    create_branch_with_snapshot("main", commit, [{ name: "rails" }])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Stale.new(["--days=30"]).run
+      end
+    end
+
+    assert_includes output, "updated recently"
+  end
+end
+
+class Git::Pkgs::TestTreeCommand < Git::Pkgs::CommandTestBase
+  def test_tree_shows_dependency_tree
+    commit = create_commit_with_changes("alice", [
+      { name: "rails", change_type: "added", requirement: "~> 7.0", dependency_type: "runtime" },
+      { name: "rspec", change_type: "added", requirement: "~> 3.0", dependency_type: "development" }
+    ])
+    create_branch_with_snapshot("main", commit, [
+      { name: "rails", requirement: "~> 7.0", dependency_type: "runtime" },
+      { name: "rspec", requirement: "~> 3.0", dependency_type: "development" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Tree.new([]).run
+      end
+    end
+
+    assert_includes output, "Gemfile"
+    assert_includes output, "rails"
+    assert_includes output, "rspec"
+    assert_includes output, "runtime"
+    assert_includes output, "development"
+  end
+
+  def test_tree_filters_by_ecosystem
+    commit = create_commit_with_changes("alice", [
+      { name: "rails", change_type: "added" }
+    ])
+    create_branch_with_snapshot("main", commit, [{ name: "rails" }])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Tree.new(["--ecosystem=npm"]).run
+      end
+    end
+
+    assert_includes output, "No dependencies found"
+  end
+end
+
+class Git::Pkgs::TestHooksCommand < Git::Pkgs::CommandTestBase
   def test_hooks_install
     output = capture_stdout do
       Dir.chdir(@test_dir) do
@@ -1184,7 +1839,6 @@ class Git::Pkgs::TestHooksCommand < Minitest::Test
   end
 
   def test_hooks_uninstall
-    # Install first
     Dir.chdir(@test_dir) do
       capture_stdout { Git::Pkgs::Commands::Hooks.new(["--install"]).run }
     end
@@ -1199,34 +1853,24 @@ class Git::Pkgs::TestHooksCommand < Minitest::Test
     refute File.exist?(File.join(@git_dir, "hooks", "post-commit"))
   end
 
-  def capture_stdout
-    original = $stdout
-    $stdout = StringIO.new
-    yield
-    $stdout.string
-  ensure
-    $stdout = original
+  def test_hooks_already_installed_is_silent
+    Dir.chdir(@test_dir) do
+      capture_stdout { Git::Pkgs::Commands::Hooks.new(["--install"]).run }
+    end
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Hooks.new(["--install"]).run
+      end
+    end
+
+    # Should not say "Installed hooks" again
+    refute_includes output, "Installed hooks"
   end
 end
 
-class Git::Pkgs::TestBranchCommand < Minitest::Test
-  include TestHelpers
-
-  def setup
-    create_test_repo
-    add_file("Gemfile", sample_gemfile({ "rails" => "~> 7.0" }))
-    commit("Add rails")
-    @git_dir = File.join(@test_dir, ".git")
-  end
-
-  def teardown
-    cleanup_test_repo
-  end
-
+class Git::Pkgs::TestBranchCommand < Git::Pkgs::CommandTestBase
   def test_branch_list_empty
-    Git::Pkgs::Database.connect(@git_dir)
-    Git::Pkgs::Database.create_schema
-
     output = capture_stdout do
       Dir.chdir(@test_dir) do
         Git::Pkgs::Commands::Branch.new(["list"]).run
@@ -1236,14 +1880,115 @@ class Git::Pkgs::TestBranchCommand < Minitest::Test
     assert_includes output, "No branches tracked"
   end
 
+  def test_branch_list_shows_tracked_branches
+    commit = create_commit_with_changes("alice", [{ name: "rails", change_type: "added" }])
+    branch = Git::Pkgs::Models::Branch.create(name: "main", last_analyzed_sha: commit.sha)
+    Git::Pkgs::Models::BranchCommit.create(branch: branch, commit: commit, position: 1)
 
-  def capture_stdout
-    original = $stdout
-    $stdout = StringIO.new
-    yield
-    $stdout.string
-  ensure
-    $stdout = original
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Branch.new(["list"]).run
+      end
+    end
+
+    assert_includes output, "Tracked branches"
+    assert_includes output, "main"
+  end
+
+  def test_branch_remove
+    commit = create_commit_with_changes("alice", [{ name: "rails", change_type: "added" }])
+    branch = Git::Pkgs::Models::Branch.create(name: "feature", last_analyzed_sha: commit.sha)
+    Git::Pkgs::Models::BranchCommit.create(branch: branch, commit: commit, position: 1)
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Branch.new(["remove", "feature"]).run
+      end
+    end
+
+    assert_includes output, "Removed branch 'feature'"
+    assert_nil Git::Pkgs::Models::Branch.first(name: "feature")
+  end
+
+  def test_branch_remove_not_tracked
+    output = capture_stderr do
+      Dir.chdir(@test_dir) do
+        assert_raises(SystemExit) do
+          Git::Pkgs::Commands::Branch.new(["remove", "nonexistent"]).run
+        end
+      end
+    end
+
+    assert_includes output, "not tracked"
+  end
+
+  def test_branch_help
+    output = capture_stdout do
+      Git::Pkgs::Commands::Branch.new(["--help"]).run
+    end
+
+    assert_includes output, "Usage:"
+    assert_includes output, "add <name>"
+    assert_includes output, "list"
+    assert_includes output, "remove <name>"
+  end
+
+  def test_branch_unknown_subcommand
+    output = capture_stderr do
+      Dir.chdir(@test_dir) do
+        assert_raises(SystemExit) do
+          Git::Pkgs::Commands::Branch.new(["unknown"]).run
+        end
+      end
+    end
+
+    assert_includes output, "Unknown subcommand"
+  end
+
+  def test_branch_add_already_tracked
+    commit = create_commit_with_changes("alice", [{ name: "rails", change_type: "added" }])
+    Git::Pkgs::Models::Branch.create(name: "main", last_analyzed_sha: commit.sha)
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Branch.new(["add", "main"]).run
+      end
+    end
+
+    assert_includes output, "already tracked"
+  end
+
+  def test_branch_add_not_found
+    output = capture_stderr do
+      Dir.chdir(@test_dir) do
+        assert_raises(SystemExit) do
+          Git::Pkgs::Commands::Branch.new(["add", "nonexistent-branch"]).run
+        end
+      end
+    end
+
+    assert_includes output, "not found"
+  end
+
+  def test_branch_list_shows_dependency_commit_count
+    commit1 = create_commit_with_changes("alice", [{ name: "rails", change_type: "added" }])
+    commit2 = Git::Pkgs::Models::Commit.create(
+      sha: SecureRandom.hex(20), message: "No deps",
+      author_name: "bob", author_email: "bob@example.com",
+      committed_at: Time.now, has_dependency_changes: false
+    )
+    branch = Git::Pkgs::Models::Branch.create(name: "main", last_analyzed_sha: commit1.sha)
+    Git::Pkgs::Models::BranchCommit.create(branch: branch, commit: commit1, position: 1)
+    Git::Pkgs::Models::BranchCommit.create(branch: branch, commit: commit2, position: 2)
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Branch.new(["list"]).run
+      end
+    end
+
+    assert_includes output, "2 commits"
+    assert_includes output, "1 with deps"
   end
 end
 
@@ -1285,6 +2030,19 @@ class Git::Pkgs::TestInitCommand < Minitest::Test
     end
 
     assert_includes output, "Analyzed"
+  end
+
+  def test_init_reports_dependency_commits
+    add_file("Gemfile", sample_gemfile({ "rails" => "~> 7.0", "puma" => "~> 6.0" }))
+    commit("Add puma")
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Init.new(["--no-hooks"]).run
+      end
+    end
+
+    assert_match(/\d+ with dependency changes/, output)
   end
 
   def capture_stdout
@@ -1386,5 +2144,328 @@ class Git::Pkgs::TestUpgradeCommand < Minitest::Test
     $stdout.string
   ensure
     $stdout = original
+  end
+end
+
+class Git::Pkgs::TestCompletionsCommand < Minitest::Test
+  include TestHelpers
+
+  def setup
+    @original_home = ENV["HOME"]
+    @temp_home = Dir.mktmpdir
+    ENV["HOME"] = @temp_home
+  end
+
+  def teardown
+    ENV["HOME"] = @original_home
+    FileUtils.rm_rf(@temp_home) if @temp_home && File.exist?(@temp_home)
+  end
+
+  def test_completions_bash_output
+    output = capture_stdout do
+      Git::Pkgs::Commands::Completions.new(["bash"]).run
+    end
+
+    assert_includes output, "_git_pkgs()"
+    assert_includes output, "COMPREPLY"
+    assert_includes output, "complete -F _git_pkgs git-pkgs"
+  end
+
+  def test_completions_zsh_output
+    output = capture_stdout do
+      Git::Pkgs::Commands::Completions.new(["zsh"]).run
+    end
+
+    assert_includes output, "#compdef git-pkgs"
+    assert_includes output, "_git-pkgs()"
+    assert_includes output, "commands=("
+  end
+
+  def test_completions_help
+    output = capture_stdout do
+      Git::Pkgs::Commands::Completions.new(["--help"]).run
+    end
+
+    assert_includes output, "Usage: git pkgs completions"
+    assert_includes output, "bash"
+    assert_includes output, "zsh"
+    assert_includes output, "install"
+  end
+
+  def test_completions_nil_shows_help
+    output = capture_stdout do
+      Git::Pkgs::Commands::Completions.new([]).run
+    end
+
+    assert_includes output, "Usage: git pkgs completions"
+  end
+
+  def test_completions_unknown_shell_error
+    output = capture_stderr do
+      assert_raises(SystemExit) do
+        Git::Pkgs::Commands::Completions.new(["fish"]).run
+      end
+    end
+
+    assert_includes output, "Unknown shell: fish"
+    assert_includes output, "Supported: bash, zsh"
+  end
+
+  def test_completions_install_bash
+    original_shell = ENV["SHELL"]
+    ENV["SHELL"] = "/bin/bash"
+
+    output = capture_stdout do
+      Git::Pkgs::Commands::Completions.new(["install"]).run
+    end
+
+    assert_includes output, "Installed bash completions"
+    completion_path = File.join(@temp_home, ".local/share/bash-completion/completions/git-pkgs")
+    assert File.exist?(completion_path)
+    assert_includes File.read(completion_path), "_git_pkgs()"
+  ensure
+    ENV["SHELL"] = original_shell
+  end
+
+  def test_completions_install_zsh
+    original_shell = ENV["SHELL"]
+    ENV["SHELL"] = "/bin/zsh"
+
+    output = capture_stdout do
+      Git::Pkgs::Commands::Completions.new(["install"]).run
+    end
+
+    assert_includes output, "Installed zsh completions"
+    completion_path = File.join(@temp_home, ".zsh/completions/_git-pkgs")
+    assert File.exist?(completion_path)
+    assert_includes File.read(completion_path), "#compdef git-pkgs"
+  ensure
+    ENV["SHELL"] = original_shell
+  end
+
+  def test_completions_install_unknown_shell
+    original_shell = ENV["SHELL"]
+    ENV["SHELL"] = "/bin/unknown"
+
+    output = capture_stderr do
+      assert_raises(SystemExit) do
+        Git::Pkgs::Commands::Completions.new(["install"]).run
+      end
+    end
+
+    assert_includes output, "Could not detect shell"
+  ensure
+    ENV["SHELL"] = original_shell
+  end
+
+  def capture_stdout
+    original = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = original
+  end
+
+  def capture_stderr
+    original = $stderr
+    $stderr = StringIO.new
+    yield
+    $stderr.string
+  ensure
+    $stderr = original
+  end
+end
+
+class Git::Pkgs::TestDiffDriverCommand < Minitest::Test
+  include TestHelpers
+
+  def setup
+    Git::Pkgs::Database.disconnect
+    create_test_repo
+    @git_dir = File.join(@test_dir, ".git")
+  end
+
+  def teardown
+    cleanup_test_repo
+  end
+
+  def test_diff_driver_textconv_gemfile_lock
+    gemfile_lock = <<~LOCK
+      GEM
+        remote: https://rubygems.org/
+        specs:
+          rails (7.0.0)
+          nokogiri (1.15.0)
+
+      PLATFORMS
+        ruby
+
+      DEPENDENCIES
+        rails
+        nokogiri
+
+      BUNDLED WITH
+        2.4.0
+    LOCK
+
+    lockfile_path = File.join(@test_dir, "Gemfile.lock")
+    File.write(lockfile_path, gemfile_lock)
+
+    output = capture_stdout do
+      Git::Pkgs::Commands::DiffDriver.new([lockfile_path]).run
+    end
+
+    assert_includes output, "nokogiri"
+    assert_includes output, "rails"
+  end
+
+  def test_diff_driver_empty_file
+    empty_path = File.join(@test_dir, "empty.lock")
+    File.write(empty_path, "")
+
+    output = capture_stdout do
+      Git::Pkgs::Commands::DiffDriver.new([empty_path]).run
+    end
+
+    assert_equal "", output
+  end
+
+  def test_diff_driver_dev_null
+    output = capture_stdout do
+      Git::Pkgs::Commands::DiffDriver.new(["/dev/null"]).run
+    end
+
+    assert_equal "", output
+  end
+
+  def test_diff_driver_nonexistent_file
+    output = capture_stdout do
+      Git::Pkgs::Commands::DiffDriver.new(["/nonexistent/file.lock"]).run
+    end
+
+    assert_equal "", output
+  end
+
+  def test_diff_driver_install
+    Dir.chdir(@test_dir) do
+      output = capture_stdout do
+        Git::Pkgs::Commands::DiffDriver.new(["--install"]).run
+      end
+
+      assert_includes output, "Installed textconv driver"
+
+      gitattributes = File.read(File.join(@test_dir, ".gitattributes"))
+      assert_includes gitattributes, "Gemfile.lock diff=pkgs"
+      assert_includes gitattributes, "package-lock.json diff=pkgs"
+    end
+  end
+
+  def test_diff_driver_install_idempotent
+    Dir.chdir(@test_dir) do
+      # First install
+      capture_stdout { Git::Pkgs::Commands::DiffDriver.new(["--install"]).run }
+      first_content = File.read(File.join(@test_dir, ".gitattributes"))
+
+      # Second install should not duplicate entries
+      capture_stdout { Git::Pkgs::Commands::DiffDriver.new(["--install"]).run }
+      second_content = File.read(File.join(@test_dir, ".gitattributes"))
+
+      assert_equal first_content, second_content
+    end
+  end
+
+  def test_diff_driver_uninstall
+    Dir.chdir(@test_dir) do
+      # First install
+      capture_stdout { Git::Pkgs::Commands::DiffDriver.new(["--install"]).run }
+
+      # Then uninstall
+      output = capture_stdout do
+        Git::Pkgs::Commands::DiffDriver.new(["--uninstall"]).run
+      end
+
+      assert_includes output, "Uninstalled diff driver"
+
+      gitattributes = File.read(File.join(@test_dir, ".gitattributes"))
+      refute_includes gitattributes, "diff=pkgs"
+    end
+  end
+
+  def test_diff_driver_help
+    output = capture_stdout do
+      assert_raises(SystemExit) do
+        Git::Pkgs::Commands::DiffDriver.new(["--help"]).run
+      end
+    end
+
+    assert_includes output, "Usage: git pkgs diff-driver"
+    assert_includes output, "--install"
+    assert_includes output, "--uninstall"
+  end
+
+  def test_diff_driver_no_args_error
+    output = capture_stderr do
+      assert_raises(SystemExit) do
+        Git::Pkgs::Commands::DiffDriver.new([]).run
+      end
+    end
+
+    assert_includes output, "Usage: git pkgs diff-driver"
+  end
+
+  def test_diff_driver_shows_dependency_type
+    package_lock = <<~JSON
+      {
+        "name": "test-project",
+        "lockfileVersion": 2,
+        "packages": {
+          "": {
+            "name": "test-project",
+            "dependencies": {
+              "lodash": "^4.17.21"
+            },
+            "devDependencies": {
+              "jest": "^29.0.0"
+            }
+          },
+          "node_modules/lodash": {
+            "version": "4.17.21"
+          },
+          "node_modules/jest": {
+            "version": "29.0.0",
+            "dev": true
+          }
+        }
+      }
+    JSON
+
+    lockfile_path = File.join(@test_dir, "package-lock.json")
+    File.write(lockfile_path, package_lock)
+
+    output = capture_stdout do
+      Git::Pkgs::Commands::DiffDriver.new([lockfile_path]).run
+    end
+
+    # Should include dependencies
+    assert_includes output, "lodash"
+  end
+
+  def capture_stdout
+    original = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = original
+  end
+
+  def capture_stderr
+    original = $stderr
+    $stderr = StringIO.new
+    yield
+    $stderr.string
+  ensure
+    $stderr = original
   end
 end

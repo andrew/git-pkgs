@@ -24,11 +24,16 @@ module Git
           error "No analysis found for branch '#{branch_name}'. Run 'git pkgs init' first." unless branch&.last_analyzed_sha
 
           current_commit = Models::Commit.first(sha: branch.last_analyzed_sha)
-          snapshots = current_commit&.dependency_snapshots&.eager(:manifest) || []
+
+          return empty_result("No dependencies found") unless current_commit
+
+          snapshots = current_commit.dependency_snapshots_dataset.eager(:manifest)
 
           if @options[:ecosystem]
             snapshots = snapshots.where(ecosystem: @options[:ecosystem])
           end
+
+          snapshots = snapshots.all
 
           if snapshots.empty?
             empty_result "No dependencies found"

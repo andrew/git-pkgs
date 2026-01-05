@@ -3,6 +3,9 @@
 ## [0.6.1] - 2026-01-05
 
 - Fix `stats` command crash on most changed dependencies query
+- Fix `search` command SQL alias error when displaying results
+- Fix `blame` and `stale` commands eager loading error
+- Fix `list` command returning empty output when ecosystem filter matches nothing
 
 ## [0.6.0] - 2026-01-05
 

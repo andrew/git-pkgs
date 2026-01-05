@@ -85,14 +85,18 @@ module Git
           Git::Pkgs::Models::DependencySnapshot
         ].each do |model|
           model.dataset = @db[model.table_name]
-          # Clear cached association datasets and loaders that may reference old db
+          # Clear all cached association data that may reference old db
           model.association_reflections.each_value do |reflection|
+            reflection.delete(:_dataset)
+            reflection.delete(:associated_eager_dataset)
+            reflection.delete(:placeholder_eager_loader)
+            reflection.delete(:placeholder_eager_graph_loader)
             if reflection[:cache]
-              reflection[:cache].delete(:_dataset)
-              reflection[:cache].delete(:associated_eager_dataset)
-              reflection[:cache].delete(:placeholder_eager_loader)
+              reflection[:cache].clear
             end
           end
+          # Clear model instance caches
+          model.instance_variable_set(:@columns, nil) if model.instance_variable_defined?(:@columns)
         rescue Sequel::Error
           # Table may not exist yet
         end

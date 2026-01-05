@@ -24,11 +24,6 @@ module Git
 
           deps = compute_dependencies_at_commit(target_commit, repo)
 
-          if deps.empty?
-            empty_result "No dependencies found"
-            return
-          end
-
           # Apply filters
           if @options[:ecosystem]
             deps = deps.select { |d| d[:ecosystem] == @options[:ecosystem] }
@@ -36,6 +31,11 @@ module Git
 
           if @options[:type]
             deps = deps.select { |d| d[:dependency_type] == @options[:type] }
+          end
+
+          if deps.empty?
+            empty_result "No dependencies found"
+            return
           end
 
           if @options[:format] == "json"

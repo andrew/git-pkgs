@@ -72,7 +72,7 @@ module Git
               .where(name: name, ecosystem: platform)
               .eager(:commit)
               .association_join(:commit)
-              .order(Sequel[:commits][:committed_at])
+              .order(Sequel[:commit][:committed_at])
               .all
 
             first = changes.first
@@ -98,7 +98,7 @@ module Git
             .where(name: name, ecosystem: platform)
             .eager(:commit)
             .association_join(:commit)
-            .order(Sequel[:commits][:committed_at])
+            .order(Sequel[:commit][:committed_at])
             .all
 
           first = changes.first

@@ -79,14 +79,15 @@ module Git
           }
 
           most_changed = changes
+            .select(Sequel[:dependency_changes][:name], Sequel[:dependency_changes][:ecosystem])
+            .select_append { count.function.*.as(:change_count) }
             .group(Sequel[:dependency_changes][:name], Sequel[:dependency_changes][:ecosystem])
-            .order(Sequel.desc(:count))
+            .order(Sequel.desc(:change_count))
             .limit(10)
-            .select_append { count.function.*.as(:count) }
-            .select_map([:name, :ecosystem, :count])
+            .all
 
-          data[:most_changed] = most_changed.map do |name, eco, count|
-            { name: name, ecosystem: eco, changes: count }
+          data[:most_changed] = most_changed.map do |row|
+            { name: row[:name], ecosystem: row[:ecosystem], changes: row[:change_count] }
           end
 
           manifests = Models::Manifest.dataset

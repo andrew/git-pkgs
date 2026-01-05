@@ -597,6 +597,45 @@ class Git::Pkgs::TestStatsCommand < Minitest::Test
     refute_includes output, "bob"
   end
 
+  def test_stats_default_shows_most_changed
+    create_commit_with_author("alice", "alice@example.com", [
+      { name: "rails", change_type: "added" },
+      { name: "rails", change_type: "modified" },
+      { name: "puma", change_type: "added" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Stats.new([]).run
+      end
+    end
+
+    assert_includes output, "Most Changed Dependencies"
+    assert_includes output, "rails"
+    assert_includes output, "2 changes"
+    assert_includes output, "puma"
+  end
+
+  def test_stats_default_json_format
+    create_commit_with_author("alice", "alice@example.com", [
+      { name: "rails", change_type: "added" },
+      { name: "puma", change_type: "added" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Stats.new(["--format=json"]).run
+      end
+    end
+
+    data = JSON.parse(output)
+    assert data.key?("most_changed")
+    assert_equal 2, data["most_changed"].length
+    names = data["most_changed"].map { |d| d["name"] }
+    assert_includes names, "rails"
+    assert_includes names, "puma"
+  end
+
   def create_commit_with_author(name, email, changes, committed_at: Time.now)
     sha = SecureRandom.hex(20)
     commit = Git::Pkgs::Models::Commit.create(
@@ -1002,6 +1041,342 @@ class Git::Pkgs::TestSchemaCommand < Minitest::Test
     assert_includes output, "## commits"
     assert_includes output, "| Column | Type |"
     assert_includes output, "| sha |"
+  end
+
+  def capture_stdout
+    original = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = original
+  end
+end
+
+class Git::Pkgs::TestSearchCommand < Minitest::Test
+  include TestHelpers
+
+  def setup
+    create_test_repo
+    add_file("Gemfile", "source 'https://rubygems.org'\ngem 'rails'")
+    commit("Add rails")
+    @git_dir = File.join(@test_dir, ".git")
+    Git::Pkgs::Database.connect(@git_dir)
+    Git::Pkgs::Database.create_schema
+  end
+
+  def teardown
+    cleanup_test_repo
+  end
+
+  def test_search_not_found
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Search.new(["nonexistent"]).run
+      end
+    end
+
+    assert_includes output, "No dependencies found"
+  end
+
+  def test_search_requires_pattern
+    assert_raises(SystemExit) do
+      capture_stderr do
+        Dir.chdir(@test_dir) do
+          Git::Pkgs::Commands::Search.new([]).run
+        end
+      end
+    end
+  end
+
+  def capture_stdout
+    original = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = original
+  end
+
+  def capture_stderr
+    original = $stderr
+    $stderr = StringIO.new
+    yield
+    $stderr.string
+  ensure
+    $stderr = original
+  end
+end
+
+class Git::Pkgs::TestWhyCommand < Minitest::Test
+  include TestHelpers
+
+  def setup
+    create_test_repo
+    add_file("Gemfile", "source 'https://rubygems.org'\ngem 'rails'")
+    commit("Add rails")
+    @git_dir = File.join(@test_dir, ".git")
+    Git::Pkgs::Database.connect(@git_dir)
+    Git::Pkgs::Database.create_schema
+  end
+
+  def teardown
+    cleanup_test_repo
+  end
+
+  def test_why_package_not_found
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Why.new(["nonexistent"]).run
+      end
+    end
+
+    assert_includes output, "not found"
+  end
+
+  def capture_stdout
+    original = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = original
+  end
+end
+
+class Git::Pkgs::TestHooksCommand < Minitest::Test
+  include TestHelpers
+
+  def setup
+    create_test_repo
+    add_file("Gemfile", "source 'https://rubygems.org'\ngem 'rails'")
+    commit("Add rails")
+    @git_dir = File.join(@test_dir, ".git")
+    Git::Pkgs::Database.connect(@git_dir)
+    Git::Pkgs::Database.create_schema
+  end
+
+  def teardown
+    cleanup_test_repo
+  end
+
+  def test_hooks_install
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Hooks.new(["--install"]).run
+      end
+    end
+
+    assert_includes output, "Installed hooks"
+    assert File.exist?(File.join(@git_dir, "hooks", "post-commit"))
+    assert File.exist?(File.join(@git_dir, "hooks", "post-merge"))
+  end
+
+  def test_hooks_status
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Hooks.new([]).run
+      end
+    end
+
+    assert_includes output, "Hook status"
+    assert_includes output, "post-commit"
+  end
+
+  def test_hooks_uninstall
+    # Install first
+    Dir.chdir(@test_dir) do
+      capture_stdout { Git::Pkgs::Commands::Hooks.new(["--install"]).run }
+    end
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Hooks.new(["--uninstall"]).run
+      end
+    end
+
+    assert_includes output, "uninstalled"
+    refute File.exist?(File.join(@git_dir, "hooks", "post-commit"))
+  end
+
+  def capture_stdout
+    original = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = original
+  end
+end
+
+class Git::Pkgs::TestBranchCommand < Minitest::Test
+  include TestHelpers
+
+  def setup
+    create_test_repo
+    add_file("Gemfile", sample_gemfile({ "rails" => "~> 7.0" }))
+    commit("Add rails")
+    @git_dir = File.join(@test_dir, ".git")
+  end
+
+  def teardown
+    cleanup_test_repo
+  end
+
+  def test_branch_list_empty
+    Git::Pkgs::Database.connect(@git_dir)
+    Git::Pkgs::Database.create_schema
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Branch.new(["list"]).run
+      end
+    end
+
+    assert_includes output, "No branches tracked"
+  end
+
+
+  def capture_stdout
+    original = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = original
+  end
+end
+
+class Git::Pkgs::TestInitCommand < Minitest::Test
+  include TestHelpers
+
+  def setup
+    Git::Pkgs::Database.disconnect
+    create_test_repo
+    add_file("Gemfile", sample_gemfile({ "rails" => "~> 7.0" }))
+    commit("Add rails")
+  end
+
+  def teardown
+    cleanup_test_repo
+  end
+
+  def test_init_creates_database
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Init.new(["--no-hooks"]).run
+      end
+    end
+
+    assert_includes output, "Analyzed"
+    assert_includes output, "main"
+    assert File.exist?(File.join(@test_dir, ".git", "pkgs.sqlite3"))
+  end
+
+  def test_init_force_rebuilds
+    Dir.chdir(@test_dir) do
+      capture_stdout { Git::Pkgs::Commands::Init.new(["--no-hooks"]).run }
+    end
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Init.new(["--force", "--no-hooks"]).run
+      end
+    end
+
+    assert_includes output, "Analyzed"
+  end
+
+  def capture_stdout
+    original = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = original
+  end
+end
+
+class Git::Pkgs::TestUpdateCommand < Minitest::Test
+  include TestHelpers
+
+  def setup
+    Git::Pkgs::Database.disconnect
+    create_test_repo
+    add_file("Gemfile", sample_gemfile({ "rails" => "~> 7.0" }))
+    commit("Add rails")
+    @git_dir = File.join(@test_dir, ".git")
+
+    Dir.chdir(@test_dir) do
+      capture_stdout { Git::Pkgs::Commands::Init.new(["--no-hooks"]).run }
+    end
+  end
+
+  def teardown
+    cleanup_test_repo
+  end
+
+  def test_update_already_current
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Update.new([]).run
+      end
+    end
+
+    assert_includes output, "Already up to date"
+  end
+
+  def test_update_processes_new_commits
+    add_file("Gemfile", sample_gemfile({ "rails" => "~> 7.0", "puma" => "~> 6.0" }))
+    commit("Add puma")
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Update.new([]).run
+      end
+    end
+
+    assert_includes output, "Updated"
+    assert_includes output, "1 commit"
+  end
+
+  def capture_stdout
+    original = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = original
+  end
+end
+
+class Git::Pkgs::TestUpgradeCommand < Minitest::Test
+  include TestHelpers
+
+  def setup
+    Git::Pkgs::Database.disconnect
+    create_test_repo
+    add_file("Gemfile", sample_gemfile({ "rails" => "~> 7.0" }))
+    commit("Add rails")
+    @git_dir = File.join(@test_dir, ".git")
+
+    Dir.chdir(@test_dir) do
+      capture_stdout { Git::Pkgs::Commands::Init.new(["--no-hooks"]).run }
+    end
+  end
+
+  def teardown
+    cleanup_test_repo
+  end
+
+  def test_upgrade_already_current
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Upgrade.new([]).run
+      end
+    end
+
+    assert_includes output, "up to date"
   end
 
   def capture_stdout

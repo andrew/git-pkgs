@@ -62,29 +62,12 @@ class Git::Pkgs::TestConfig < Minitest::Test
     end
   end
 
-  def test_filter_ecosystem_returns_false_for_local_when_no_ecosystems_configured
+  def test_filter_ecosystem_returns_false_when_no_ecosystems_configured
     Dir.chdir(@test_dir) do
       refute Git::Pkgs::Config.filter_ecosystem?("rubygems")
       refute Git::Pkgs::Config.filter_ecosystem?("npm")
-    end
-  end
-
-  def test_filter_ecosystem_returns_true_for_remote_when_no_ecosystems_configured
-    Dir.chdir(@test_dir) do
-      assert Git::Pkgs::Config.filter_ecosystem?("carthage")
-      assert Git::Pkgs::Config.filter_ecosystem?("clojars")
-      assert Git::Pkgs::Config.filter_ecosystem?("hackage")
-      assert Git::Pkgs::Config.filter_ecosystem?("hex")
-      assert Git::Pkgs::Config.filter_ecosystem?("swiftpm")
-    end
-  end
-
-  def test_filter_ecosystem_allows_remote_when_explicitly_enabled
-    Dir.chdir(@test_dir) do
-      system("git config --add pkgs.ecosystems carthage", out: File::NULL)
-      Git::Pkgs::Config.reset!
-
       refute Git::Pkgs::Config.filter_ecosystem?("carthage")
+      refute Git::Pkgs::Config.filter_ecosystem?("hex")
     end
   end
 
@@ -117,20 +100,6 @@ class Git::Pkgs::TestConfig < Minitest::Test
       refute Git::Pkgs::Config.filter_ecosystem?("rubygems")
       refute Git::Pkgs::Config.filter_ecosystem?("RUBYGEMS")
     end
-  end
-
-  def test_remote_ecosystem_returns_true_for_remote_ecosystems
-    assert Git::Pkgs::Config.remote_ecosystem?("carthage")
-    assert Git::Pkgs::Config.remote_ecosystem?("clojars")
-    assert Git::Pkgs::Config.remote_ecosystem?("hackage")
-    assert Git::Pkgs::Config.remote_ecosystem?("hex")
-    assert Git::Pkgs::Config.remote_ecosystem?("swiftpm")
-  end
-
-  def test_remote_ecosystem_returns_false_for_local_ecosystems
-    refute Git::Pkgs::Config.remote_ecosystem?("rubygems")
-    refute Git::Pkgs::Config.remote_ecosystem?("npm")
-    refute Git::Pkgs::Config.remote_ecosystem?("pypi")
   end
 
   def test_configure_bibliothecary_adds_ignored_dirs

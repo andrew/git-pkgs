@@ -429,9 +429,7 @@ Optimizations:
 
 git-pkgs uses [ecosystems-bibliothecary](https://github.com/ecosyste-ms/bibliothecary) for parsing, supporting:
 
-Actions, BentoML, Bower, Cargo, CocoaPods, Cog, Conda, CPAN, CRAN, Docker, Dub, DVC, Elm, Go, Haxelib, Homebrew, Julia, Maven, Meteor, MLflow, npm, NuGet, Ollama, Packagist, Pub, PyPI, RubyGems, Shards, Vcpkg
-
-Some ecosystems require remote parsing services and are disabled by default: Carthage, Clojars, Hackage, Hex, SwiftPM. Enable with `git config --add pkgs.ecosystems <name>`.
+Actions, BentoML, Bower, Cargo, Carthage, Clojars, CocoaPods, Cog, Conda, CPAN, CRAN, Docker, Dub, DVC, Elm, Go, Hackage, Haxelib, Hex, Homebrew, Julia, Maven, Meteor, MLflow, npm, NuGet, Ollama, Packagist, Pub, PyPI, RubyGems, Shards, SwiftPM, Vcpkg
 
 SBOM formats (CycloneDX, SPDX) are not supported as they duplicate information from the actual lockfiles.
 

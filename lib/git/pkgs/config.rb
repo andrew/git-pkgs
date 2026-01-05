@@ -5,9 +5,6 @@ require "bibliothecary"
 module Git
   module Pkgs
     module Config
-      # Ecosystems that require remote parsing services - disabled by default
-      REMOTE_ECOSYSTEMS = %w[carthage clojars hackage hex swiftpm].freeze
-
       # File patterns ignored by default (SBOM formats not supported)
       DEFAULT_IGNORED_FILES = %w[
         cyclonedx.xml
@@ -41,22 +38,10 @@ module Git
       end
 
       def self.filter_ecosystem?(platform)
-        platform_lower = platform.to_s.downcase
-
-        # Remote ecosystems are disabled unless explicitly enabled
-        if REMOTE_ECOSYSTEMS.include?(platform_lower)
-          return !ecosystems.map(&:downcase).include?(platform_lower)
-        end
-
-        # If no filter configured, allow all non-remote ecosystems
         return false if ecosystems.empty?
 
-        # Otherwise, only allow explicitly listed ecosystems
+        platform_lower = platform.to_s.downcase
         !ecosystems.map(&:downcase).include?(platform_lower)
-      end
-
-      def self.remote_ecosystem?(platform)
-        REMOTE_ECOSYSTEMS.include?(platform.to_s.downcase)
       end
 
       def self.reset!

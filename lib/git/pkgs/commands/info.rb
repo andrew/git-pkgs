@@ -102,8 +102,7 @@ module Git
 
           all_ecosystems.each do |eco|
             if Config.filter_ecosystem?(eco)
-              remote = Config.remote_ecosystem?(eco)
-              disabled_ecos << { name: eco, remote: remote }
+              disabled_ecos << eco
             else
               enabled_ecos << eco
             end
@@ -119,10 +118,7 @@ module Git
           puts
           puts "Disabled:"
           if disabled_ecos.any?
-            disabled_ecos.each do |eco|
-              suffix = eco[:remote] ? " (remote)" : ""
-              puts "  #{eco[:name]}#{suffix}"
-            end
+            disabled_ecos.each { |eco| puts "  #{eco}" }
           else
             puts "  (none)"
           end
@@ -131,9 +127,8 @@ module Git
           if filtering
             puts "Filtering: only #{configured.join(', ')}"
           else
-            puts "All local ecosystems enabled"
+            puts "All ecosystems enabled"
           end
-          puts "Remote ecosystems require explicit opt-in"
           puts "Configure with: git config --add pkgs.ecosystems <name>"
         end
 

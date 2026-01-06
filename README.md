@@ -2,6 +2,8 @@
 
 A git subcommand for tracking package dependencies across git history. Analyzes your repository to show when dependencies were added, modified, or removed, who made those changes, and why.
 
+[Installation](#installation) · [Quick start](#quick-start) · [Commands](#commands) · [Configuration](#configuration) · [Ruby API](#ruby-api) · [Contributing](#contributing)
+
 ## Why this exists
 
 Your lockfile shows what dependencies you have, but it doesn't show how you got here, and `git log Gemfile.lock` is useless noise. git-pkgs indexes your dependency history into a queryable database so you can ask questions like: when did we add this? who added it? what changed between these two releases? has anyone touched this in the last year?

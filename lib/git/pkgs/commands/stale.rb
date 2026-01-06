@@ -91,11 +91,20 @@ module Git
           end
 
           if outdated_data.empty?
-            empty_result "All dependencies have been updated recently"
+            if @options[:format] == "json"
+              require "json"
+              puts JSON.pretty_generate([])
+            else
+              empty_result "All dependencies have been updated recently"
+            end
             return
           end
 
-          paginate { output_text(outdated_data) }
+          if @options[:format] == "json"
+            output_json(outdated_data)
+          else
+            paginate { output_text(outdated_data) }
+          end
         end
 
         def output_text(outdated_data)
@@ -110,6 +119,23 @@ module Git
             days = "#{dep[:days_ago]} days ago"
             puts "#{dep[:name].ljust(max_name_len)}  #{dep[:requirement].to_s.ljust(max_version_len)}  #{date}  (#{days})"
           end
+        end
+
+        def output_json(outdated_data)
+          require "json"
+
+          data = outdated_data.map do |dep|
+            {
+              name: dep[:name],
+              ecosystem: dep[:ecosystem],
+              requirement: dep[:requirement],
+              manifest: dep[:manifest],
+              last_updated: dep[:last_updated].iso8601,
+              days_ago: dep[:days_ago]
+            }
+          end
+
+          puts JSON.pretty_generate(data)
         end
 
         def parse_options
@@ -128,6 +154,10 @@ module Git
 
             opts.on("-d", "--days=N", Integer, "Only show deps not updated in N days") do |v|
               options[:days] = v
+            end
+
+            opts.on("-f", "--format=FORMAT", "Output format (text, json)") do |v|
+              options[:format] = v
             end
 
             opts.on("--no-pager", "Do not pipe output into a pager") do

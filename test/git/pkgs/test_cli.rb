@@ -286,6 +286,85 @@ class Git::Pkgs::TestDiffCommand < Minitest::Test
     assert_includes output, "Added:"
   end
 
+  def test_diff_json_format
+    repo = Git::Pkgs::Repository.new(@test_dir)
+    head_sha = repo.head_sha
+    parent_sha = repo.rev_parse("HEAD~1")
+
+    parent_commit = Git::Pkgs::Models::Commit.create(
+      sha: parent_sha, message: "Initial",
+      author_name: "Test", author_email: "test@example.com",
+      committed_at: Time.now - 3600
+    )
+    head_commit = Git::Pkgs::Models::Commit.create(
+      sha: head_sha, message: "Add puma",
+      author_name: "Test", author_email: "test@example.com",
+      committed_at: Time.now
+    )
+
+    manifest = Git::Pkgs::Models::Manifest.find_or_create(path: "Gemfile", ecosystem: "rubygems", kind: "manifest")
+    Git::Pkgs::Models::DependencyChange.create(
+      commit: head_commit, manifest: manifest, name: "puma",
+      change_type: "added", ecosystem: "rubygems", requirement: "~> 5.0"
+    )
+    Git::Pkgs::Models::DependencyChange.create(
+      commit: head_commit, manifest: manifest, name: "rails",
+      change_type: "modified", ecosystem: "rubygems", requirement: "~> 7.1",
+      previous_requirement: "~> 7.0"
+    )
+    Git::Pkgs::Models::DependencyChange.create(
+      commit: head_commit, manifest: manifest, name: "sidekiq",
+      change_type: "removed", ecosystem: "rubygems", requirement: "~> 6.0"
+    )
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Diff.new(["#{parent_sha}..#{head_sha}", "--format=json"]).run
+      end
+    end
+
+    data = JSON.parse(output)
+    assert_equal 1, data["added"].length
+    assert_equal "puma", data["added"].first["name"]
+    assert_equal 1, data["modified"].length
+    assert_equal "rails", data["modified"].first["name"]
+    assert_equal "~> 7.0", data["modified"].first["previous_requirement"]
+    assert_equal "~> 7.1", data["modified"].first["requirement"]
+    assert_equal 1, data["removed"].length
+    assert_equal "sidekiq", data["removed"].first["name"]
+    assert_equal 1, data["summary"]["added"]
+    assert_equal 1, data["summary"]["modified"]
+    assert_equal 1, data["summary"]["removed"]
+  end
+
+  def test_diff_json_format_no_changes
+    repo = Git::Pkgs::Repository.new(@test_dir)
+    head_sha = repo.head_sha
+    parent_sha = repo.rev_parse("HEAD~1")
+
+    Git::Pkgs::Models::Commit.create(
+      sha: parent_sha, message: "Initial",
+      author_name: "Test", author_email: "test@example.com",
+      committed_at: Time.now - 3600
+    )
+    Git::Pkgs::Models::Commit.create(
+      sha: head_sha, message: "No dep changes",
+      author_name: "Test", author_email: "test@example.com",
+      committed_at: Time.now
+    )
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Diff.new(["#{parent_sha}..#{head_sha}", "--format=json"]).run
+      end
+    end
+
+    data = JSON.parse(output)
+    assert_equal [], data["added"]
+    assert_equal [], data["modified"]
+    assert_equal [], data["removed"]
+  end
+
   def capture_stdout
     original = $stdout
     $stdout = StringIO.new
@@ -1624,6 +1703,41 @@ class Git::Pkgs::TestWhyCommand < Git::Pkgs::CommandTestBase
     assert_includes output, "alice"
     refute_includes output, "bob"
   end
+
+  def test_why_json_format
+    create_commit_with_changes("alice", [
+      { name: "rails", change_type: "added", requirement: "~> 7.0" }
+    ], message: "Add rails for web framework")
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Why.new(["rails", "--format=json"]).run
+      end
+    end
+
+    data = JSON.parse(output)
+    assert_equal true, data["found"]
+    assert_equal "rails", data["package"]
+    assert_equal "rubygems", data["ecosystem"]
+    assert_equal "~> 7.0", data["requirement"]
+    assert_equal "Gemfile", data["manifest"]
+    assert_equal "alice", data["commit"]["author_name"]
+    assert_equal "Add rails for web framework", data["commit"]["message"]
+    assert data["commit"].key?("sha")
+    assert data["commit"].key?("date")
+  end
+
+  def test_why_json_format_not_found
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Why.new(["nonexistent", "--format=json"]).run
+      end
+    end
+
+    data = JSON.parse(output)
+    assert_equal false, data["found"]
+    assert_equal "nonexistent", data["package"]
+  end
 end
 
 class Git::Pkgs::TestBlameCommand < Git::Pkgs::CommandTestBase
@@ -1772,6 +1886,47 @@ class Git::Pkgs::TestStaleCommand < Git::Pkgs::CommandTestBase
 
     assert_includes output, "updated recently"
   end
+
+  def test_stale_json_format
+    old_time = Time.now - (100 * 24 * 60 * 60)  # 100 days ago
+    commit = create_commit_with_changes("alice", [
+      { name: "rails", change_type: "added", requirement: "~> 7.0" }
+    ], committed_at: old_time)
+    create_branch_with_snapshot("main", commit, [
+      { name: "rails", requirement: "~> 7.0" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Stale.new(["--format=json"]).run
+      end
+    end
+
+    data = JSON.parse(output)
+    assert_equal 1, data.length
+    assert_equal "rails", data.first["name"]
+    assert_equal "rubygems", data.first["ecosystem"]
+    assert_equal "~> 7.0", data.first["requirement"]
+    assert data.first["days_ago"] >= 99
+    assert data.first.key?("last_updated")
+  end
+
+  def test_stale_json_format_empty
+    recent_time = Time.now - (5 * 24 * 60 * 60)  # 5 days ago
+    commit = create_commit_with_changes("alice", [
+      { name: "rails", change_type: "added" }
+    ], committed_at: recent_time)
+    create_branch_with_snapshot("main", commit, [{ name: "rails" }])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Stale.new(["--days=30", "--format=json"]).run
+      end
+    end
+
+    data = JSON.parse(output)
+    assert_equal [], data
+  end
 end
 
 class Git::Pkgs::TestTreeCommand < Git::Pkgs::CommandTestBase
@@ -1811,6 +1966,50 @@ class Git::Pkgs::TestTreeCommand < Git::Pkgs::CommandTestBase
     end
 
     assert_includes output, "No dependencies found"
+  end
+
+  def test_tree_json_format
+    commit = create_commit_with_changes("alice", [
+      { name: "rails", change_type: "added", requirement: "~> 7.0", dependency_type: "runtime" },
+      { name: "rspec", change_type: "added", requirement: "~> 3.0", dependency_type: "development" }
+    ])
+    create_branch_with_snapshot("main", commit, [
+      { name: "rails", requirement: "~> 7.0", dependency_type: "runtime" },
+      { name: "rspec", requirement: "~> 3.0", dependency_type: "development" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Tree.new(["--format=json"]).run
+      end
+    end
+
+    data = JSON.parse(output)
+    assert_equal 1, data["manifests"].length
+    assert_equal "Gemfile", data["manifests"].first["path"]
+    assert_equal "rubygems", data["manifests"].first["ecosystem"]
+    assert data["manifests"].first["dependencies"].key?("runtime")
+    assert data["manifests"].first["dependencies"].key?("development")
+    assert_equal 2, data["total"]
+  end
+
+  def test_tree_json_format_filters_to_empty
+    commit = create_commit_with_changes("alice", [
+      { name: "rails", change_type: "added", requirement: "~> 7.0", dependency_type: "runtime" }
+    ])
+    create_branch_with_snapshot("main", commit, [
+      { name: "rails", requirement: "~> 7.0", dependency_type: "runtime" }
+    ])
+
+    output = capture_stdout do
+      Dir.chdir(@test_dir) do
+        Git::Pkgs::Commands::Tree.new(["--ecosystem=npm", "--format=json"]).run
+      end
+    end
+
+    data = JSON.parse(output)
+    assert_equal [], data["manifests"]
+    assert_equal 0, data["total"]
   end
 end
 

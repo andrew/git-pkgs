@@ -35,12 +35,25 @@ module Git
           added_change = added_change.first
 
           unless added_change
-            empty_result "Package '#{package_name}' not found in dependency history"
+            if @options[:format] == "json"
+              require "json"
+              puts JSON.pretty_generate({ found: false, package: package_name })
+            else
+              empty_result "Package '#{package_name}' not found in dependency history"
+            end
             return
           end
 
           commit = added_change.commit
 
+          if @options[:format] == "json"
+            output_json(package_name, added_change, commit)
+          else
+            output_text(package_name, added_change, commit)
+          end
+        end
+
+        def output_text(package_name, added_change, commit)
           puts "#{package_name} was added in commit #{commit.short_sha}"
           puts
           puts "Date:    #{commit.committed_at.strftime("%Y-%m-%d %H:%M")}"
@@ -52,6 +65,28 @@ module Git
           puts commit.message.to_s.lines.map { |l| "  #{l}" }.join
         end
 
+        def output_json(package_name, added_change, commit)
+          require "json"
+
+          data = {
+            found: true,
+            package: package_name,
+            ecosystem: added_change.ecosystem,
+            requirement: added_change.requirement,
+            manifest: added_change.manifest.path,
+            commit: {
+              sha: commit.sha,
+              short_sha: commit.short_sha,
+              message: commit.message,
+              author_name: commit.author_name,
+              author_email: commit.author_email,
+              date: commit.committed_at.iso8601
+            }
+          }
+
+          puts JSON.pretty_generate(data)
+        end
+
         def parse_options
           options = {}
 
@@ -60,6 +95,10 @@ module Git
 
             opts.on("-e", "--ecosystem=NAME", "Filter by ecosystem") do |v|
               options[:ecosystem] = v
+            end
+
+            opts.on("-f", "--format=FORMAT", "Output format (text, json)") do |v|
+              options[:format] = v
             end
 
             opts.on("-h", "--help", "Show this help") do

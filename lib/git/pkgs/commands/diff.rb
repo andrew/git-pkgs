@@ -51,11 +51,20 @@ module Git
           changes_list = changes.all
 
           if changes_list.empty?
-            empty_result "No dependency changes between #{from_commit.short_sha} and #{to_commit.short_sha}"
+            if @options[:format] == "json"
+              require "json"
+              puts JSON.pretty_generate({ from: from_commit.short_sha, to: to_commit.short_sha, added: [], modified: [], removed: [] })
+            else
+              empty_result "No dependency changes between #{from_commit.short_sha} and #{to_commit.short_sha}"
+            end
             return
           end
 
-          paginate { output_text(from_commit, to_commit, changes_list) }
+          if @options[:format] == "json"
+            output_json(from_commit, to_commit, changes_list)
+          else
+            paginate { output_text(from_commit, to_commit, changes_list) }
+          end
         end
 
         def output_text(from_commit, to_commit, changes)
@@ -101,6 +110,50 @@ module Git
           puts "Summary: #{added_count} #{removed_count} #{modified_count}"
         end
 
+        def output_json(from_commit, to_commit, changes)
+          require "json"
+
+          added = changes.select { |c| c.change_type == "added" }
+          modified = changes.select { |c| c.change_type == "modified" }
+          removed = changes.select { |c| c.change_type == "removed" }
+
+          format_change = lambda do |change|
+            {
+              name: change.name,
+              ecosystem: change.ecosystem,
+              requirement: change.requirement,
+              manifest: change.manifest.path,
+              commit: change.commit.short_sha,
+              date: change.commit.committed_at.iso8601
+            }
+          end
+
+          format_modified = lambda do |first, latest|
+            {
+              name: first.name,
+              ecosystem: first.ecosystem,
+              previous_requirement: first.previous_requirement,
+              requirement: latest.requirement,
+              manifest: latest.manifest.path
+            }
+          end
+
+          data = {
+            from: from_commit.short_sha,
+            to: to_commit.short_sha,
+            added: added.group_by(&:name).map { |_name, pkg_changes| format_change.call(pkg_changes.last) },
+            modified: modified.group_by(&:name).map { |_name, pkg_changes| format_modified.call(pkg_changes.first, pkg_changes.last) },
+            removed: removed.group_by(&:name).map { |_name, pkg_changes| format_change.call(pkg_changes.last) },
+            summary: {
+              added: added.map(&:name).uniq.count,
+              modified: modified.map(&:name).uniq.count,
+              removed: removed.map(&:name).uniq.count
+            }
+          }
+
+          puts JSON.pretty_generate(data)
+        end
+
         def parse_range_argument
           return [nil, nil] if @args.empty?
 
@@ -140,6 +193,10 @@ module Git
 
             opts.on("-e", "--ecosystem=NAME", "Filter by ecosystem") do |v|
               options[:ecosystem] = v
+            end
+
+            opts.on("-f", "--format=FORMAT", "Output format (text, json)") do |v|
+              options[:format] = v
             end
 
             opts.on("--no-pager", "Do not pipe output into a pager") do

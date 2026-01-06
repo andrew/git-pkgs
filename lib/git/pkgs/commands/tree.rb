@@ -33,14 +33,23 @@ module Git
           snapshots_list = snapshots.all
 
           if snapshots_list.empty?
-            empty_result "No dependencies found"
+            if @options[:format] == "json"
+              require "json"
+              puts JSON.pretty_generate({ manifests: [], total: 0 })
+            else
+              empty_result "No dependencies found"
+            end
             return
           end
 
           # Group by manifest and build tree
           grouped = snapshots_list.group_by { |s| s.manifest }
 
-          paginate { output_text(grouped, snapshots_list) }
+          if @options[:format] == "json"
+            output_json(grouped, snapshots_list)
+          else
+            paginate { output_text(grouped, snapshots_list) }
+          end
         end
 
         def output_text(grouped, snapshots)
@@ -62,6 +71,35 @@ module Git
 
           # Show summary
           puts "Total: #{snapshots.count} dependencies across #{grouped.keys.count} manifest(s)"
+        end
+
+        def output_json(grouped, snapshots)
+          require "json"
+
+          manifests = grouped.map do |manifest, deps|
+            by_type = deps.group_by { |d| d.dependency_type || "runtime" }
+
+            {
+              path: manifest.path,
+              ecosystem: manifest.ecosystem,
+              dependencies: by_type.transform_values do |type_deps|
+                type_deps.sort_by(&:name).map do |dep|
+                  {
+                    name: dep.name,
+                    requirement: dep.requirement || "*"
+                  }
+                end
+              end
+            }
+          end
+
+          data = {
+            manifests: manifests,
+            total: snapshots.count,
+            manifest_count: grouped.keys.count
+          }
+
+          puts JSON.pretty_generate(data)
         end
 
         def print_dependency(dep, indent)
@@ -109,6 +147,10 @@ module Git
 
             opts.on("-b", "--branch=NAME", "Branch context for finding snapshots") do |v|
               options[:branch] = v
+            end
+
+            opts.on("-f", "--format=FORMAT", "Output format (text, json)") do |v|
+              options[:format] = v
             end
 
             opts.on("--no-pager", "Do not pipe output into a pager") do

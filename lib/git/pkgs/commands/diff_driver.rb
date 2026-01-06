@@ -23,7 +23,7 @@ module Git
           composer.lock
           gems.locked
           glide.lock
-          go.sum
+          go.mod
           mix.lock
           npm-shrinkwrap.json
           package-lock.json

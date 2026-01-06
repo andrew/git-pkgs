@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Ignore go.sum (checksums only), treat go.mod as lockfile
+
 ## [0.6.1] - 2026-01-05
 
 - Fix `stats` command crash on most changed dependencies query

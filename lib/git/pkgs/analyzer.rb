@@ -18,7 +18,7 @@ module Git
         pom.xml ivy.xml build.gradle build.gradle.kts gradle-dependencies-q.txt
         maven-resolved-dependencies.txt sbt-update-full.txt maven-dependency-tree.txt maven-dependency-tree.dot
         Cargo.toml Cargo.lock
-        go.mod go.sum glide.yaml glide.lock Godeps Godeps/Godeps.json
+        go.mod glide.yaml glide.lock Godeps Godeps/Godeps.json
         vendor/manifest vendor/vendor.json Gopkg.toml Gopkg.lock go-resolved-dependencies.json
         composer.json composer.lock
         Podfile Podfile.lock *.podspec *.podspec.json

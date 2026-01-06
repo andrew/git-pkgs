@@ -185,6 +185,8 @@ class Git::Pkgs::TestModels < Minitest::Test
   def test_package_creation
     package = Git::Pkgs::Models::Package.create(
       purl: "pkg:gem/rails",
+      ecosystem: "rubygems",
+      name: "rails",
       latest_version: "7.1.0",
       license: "MIT",
       description: "Full-stack web framework",
@@ -198,14 +200,14 @@ class Git::Pkgs::TestModels < Minitest::Test
   end
 
   def test_package_parsed_purl
-    package = Git::Pkgs::Models::Package.create(purl: "pkg:gem/rails")
+    package = Git::Pkgs::Models::Package.create(purl: "pkg:gem/rails", ecosystem: "rubygems", name: "rails")
 
     assert_equal "gem", package.parsed_purl.type
     assert_equal "rails", package.parsed_purl.name
   end
 
   def test_package_enriched
-    package = Git::Pkgs::Models::Package.create(purl: "pkg:gem/rails")
+    package = Git::Pkgs::Models::Package.create(purl: "pkg:gem/rails", ecosystem: "rubygems", name: "rails")
     refute package.enriched?
 
     package.update(enriched_at: Time.now)
@@ -213,7 +215,7 @@ class Git::Pkgs::TestModels < Minitest::Test
   end
 
   def test_version_creation
-    Git::Pkgs::Models::Package.create(purl: "pkg:gem/rails")
+    Git::Pkgs::Models::Package.create(purl: "pkg:gem/rails", ecosystem: "rubygems", name: "rails")
 
     version = Git::Pkgs::Models::Version.create(
       purl: "pkg:gem/rails@7.0.0",
@@ -230,7 +232,7 @@ class Git::Pkgs::TestModels < Minitest::Test
   end
 
   def test_version_belongs_to_package
-    package = Git::Pkgs::Models::Package.create(purl: "pkg:gem/rails")
+    package = Git::Pkgs::Models::Package.create(purl: "pkg:gem/rails", ecosystem: "rubygems", name: "rails")
 
     version = Git::Pkgs::Models::Version.create(
       purl: "pkg:gem/rails@7.0.0",
@@ -242,15 +244,15 @@ class Git::Pkgs::TestModels < Minitest::Test
   end
 
   def test_package_purl_uniqueness
-    Git::Pkgs::Models::Package.create(purl: "pkg:gem/rails")
+    Git::Pkgs::Models::Package.create(purl: "pkg:gem/rails", ecosystem: "rubygems", name: "rails")
 
     assert_raises(Sequel::UniqueConstraintViolation) do
-      Git::Pkgs::Models::Package.create(purl: "pkg:gem/rails")
+      Git::Pkgs::Models::Package.create(purl: "pkg:gem/rails", ecosystem: "rubygems", name: "rails")
     end
   end
 
   def test_version_purl_uniqueness
-    Git::Pkgs::Models::Package.create(purl: "pkg:gem/rails")
+    Git::Pkgs::Models::Package.create(purl: "pkg:gem/rails", ecosystem: "rubygems", name: "rails")
     Git::Pkgs::Models::Version.create(purl: "pkg:gem/rails@7.0.0", package_purl: "pkg:gem/rails")
 
     assert_raises(Sequel::UniqueConstraintViolation) do

@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Fix `-f` flag conflict in `diff` command (was defined for both `--from` and `--format`)
+
 ## [0.6.2] - 2026-01-06
 
 - `--format=json` support for `diff`, `tree`, `stale`, and `why` commands
@@ -7,7 +9,6 @@
 - Update ecosystems-bibliothecary to ~> 15.1
 - `--manifest` filter for `list` command to filter by manifest path
 - Stateless parsing API for forge integration (`Git::Pkgs.parse_file`, `parse_files`, `diff_file`)
-- Fix `-f` flag conflict in `diff` command (was defined for both `--from` and `--format`)
 
 ## [0.6.1] - 2026-01-05
 

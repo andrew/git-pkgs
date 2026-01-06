@@ -183,11 +183,11 @@ module Git
             opts.separator "  git pkgs diff --from=v1.0 --to=v2.0"
             opts.separator ""
 
-            opts.on("-f", "--from=REF", "Start commit") do |v|
+            opts.on("--from=REF", "Start commit") do |v|
               options[:from] = v
             end
 
-            opts.on("-t", "--to=REF", "End commit (default: HEAD)") do |v|
+            opts.on("--to=REF", "End commit (default: HEAD)") do |v|
               options[:to] = v
             end
 

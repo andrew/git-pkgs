@@ -26,7 +26,7 @@ $ git pkgs vulns main
 ```
 -e, --ecosystem=NAME    Filter by ecosystem (npm, rubygems, pypi, etc.)
 -s, --severity=LEVEL    Minimum severity (critical, high, medium, low)
--f, --format=FORMAT     Output format (text, json)
+-f, --format=FORMAT     Output format (text, json, sarif)
 -b, --branch=NAME       Branch context for database queries
     --stateless         Parse manifests directly without database
     --no-pager          Do not pipe output into a pager
@@ -50,6 +50,21 @@ JSON output for CI/CD pipelines:
 
 ```
 $ git pkgs vulns -f json
+```
+
+SARIF output for GitHub code scanning and other security tools:
+
+```
+$ git pkgs vulns -f sarif > results.sarif
+```
+
+SARIF (Static Analysis Results Interchange Format) is supported by GitHub Advanced Security, VS Code, and many CI/CD platforms. Upload to GitHub code scanning:
+
+```yaml
+- run: git pkgs vulns --stateless -f sarif > results.sarif
+- uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: results.sarif
 ```
 
 Compare vulnerabilities between releases:

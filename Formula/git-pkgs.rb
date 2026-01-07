@@ -12,6 +12,10 @@ class GitPkgs < Formula
 
   def install
     ENV["GEM_HOME"] = libexec
+
+    system "git", "init"
+    system "git", "add", "."
+
     system "bundle", "config", "set", "--local", "without", "development"
     system "bundle", "install"
     system "gem", "build", "git-pkgs.gemspec"

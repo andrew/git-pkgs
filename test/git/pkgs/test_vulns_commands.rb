@@ -341,7 +341,8 @@ class Git::Pkgs::TestVulnsScan < Minitest::Test
     # Validate against SARIF 2.1.0 schema
     require "json_schemer"
     schema_path = File.join(File.dirname(__FILE__), "../../fixtures/sarif-schema-2.1.0.json")
-    schema = JSONSchemer.schema(Pathname.new(schema_path))
+    schema_content = JSON.parse(File.read(schema_path))
+    schema = JSONSchemer.schema(schema_content, ref_resolver: proc { |uri| schema_content })
     errors = schema.validate(sarif).to_a
     assert_empty errors, "SARIF schema validation failed: #{errors.map { |e| e["error"] }.join(", ")}"
   ensure
@@ -547,5 +548,142 @@ class Git::Pkgs::TestManifestLockfilePairing < Minitest::Test
     assert_equal 1, result.size
     assert_equal "rails", result.first[:name]
     assert_equal "7.0.0", result.first[:requirement]
+  end
+end
+
+class Git::Pkgs::TestVulnsHistory < Minitest::Test
+  include TestHelpers
+
+  def setup
+    Git::Pkgs::Database.disconnect
+    create_test_repo
+
+    add_file("package.json", '{"dependencies": {"lodash": "4.17.0"}}')
+    commit("Add lodash")
+
+    @git_dir = File.join(@test_dir, ".git")
+    Git::Pkgs::Database.connect(@git_dir)
+    Git::Pkgs::Database.create_schema
+
+    Git::Pkgs.git_dir = @git_dir
+    capture_stdout { Git::Pkgs::Commands::Init.new(["--no-hooks", "--force"]).run }
+
+    # Mark package as synced to avoid OSV API calls
+    Git::Pkgs::Models::Package.create(
+      purl: "pkg:npm/lodash",
+      ecosystem: "npm",
+      name: "lodash",
+      vulns_synced_at: Time.now
+    )
+  end
+
+  def teardown
+    Git::Pkgs.git_dir = nil
+    cleanup_test_repo
+  end
+
+  def capture_stdout
+    original = $stdout
+    $stdout = StringIO.new
+    yield
+    $stdout.string
+  ensure
+    $stdout = original
+  end
+
+  def test_history_shows_withdrawn_vulns_in_timeline
+    # Create an active vulnerability
+    active_vuln = Git::Pkgs::Models::Vulnerability.create(
+      id: "GHSA-active",
+      summary: "Active vulnerability",
+      severity: "high",
+      published_at: Time.now - 86400,
+      fetched_at: Time.now
+    )
+    Git::Pkgs::Models::VulnerabilityPackage.create(
+      vulnerability_id: active_vuln.id,
+      ecosystem: "npm",
+      package_name: "lodash",
+      vulnerable_range: "< 4.17.21"
+    )
+
+    # Create a withdrawn vulnerability
+    withdrawn_vuln = Git::Pkgs::Models::Vulnerability.create(
+      id: "GHSA-withdrawn",
+      summary: "Withdrawn vulnerability",
+      severity: "medium",
+      published_at: Time.now - 172800,
+      withdrawn_at: Time.now - 86400,
+      fetched_at: Time.now
+    )
+    Git::Pkgs::Models::VulnerabilityPackage.create(
+      vulnerability_id: withdrawn_vuln.id,
+      ecosystem: "npm",
+      package_name: "lodash",
+      vulnerable_range: "< 4.17.21"
+    )
+
+    output = capture_stdout do
+      Git::Pkgs::Commands::Vulns::History.new(["lodash"]).run
+    end
+
+    assert_includes output, "GHSA-active"
+    assert_includes output, "GHSA-withdrawn"
+    assert_includes output, "withdrawn"
+  end
+
+  def test_history_json_includes_withdrawn_vulns
+    withdrawn_vuln = Git::Pkgs::Models::Vulnerability.create(
+      id: "GHSA-withdrawn-json",
+      summary: "Withdrawn vulnerability",
+      severity: "low",
+      published_at: Time.now - 172800,
+      withdrawn_at: Time.now - 86400,
+      fetched_at: Time.now
+    )
+    Git::Pkgs::Models::VulnerabilityPackage.create(
+      vulnerability_id: withdrawn_vuln.id,
+      ecosystem: "npm",
+      package_name: "lodash",
+      vulnerable_range: "< 4.17.21"
+    )
+
+    output = capture_stdout do
+      Git::Pkgs::Commands::Vulns::History.new(["lodash", "-f", "json"]).run
+    end
+
+    json = JSON.parse(output)
+    assert_equal "lodash", json["package"]
+
+    events = json["timeline"]
+    withdrawn_events = events.select { |e| e["event_type"] == "cve_withdrawn" }
+    assert withdrawn_events.any?, "Expected withdrawn event in timeline"
+
+    published_events = events.select { |e| e["description"]&.include?("[withdrawn]") }
+    assert published_events.any?, "Expected [withdrawn] annotation on published event"
+  end
+
+  def test_history_shows_withdrawn_event_with_date
+    withdrawn_time = Time.now - 86400
+    withdrawn_vuln = Git::Pkgs::Models::Vulnerability.create(
+      id: "GHSA-with-date",
+      summary: "Withdrawn with date",
+      severity: "high",
+      published_at: Time.now - 172800,
+      withdrawn_at: withdrawn_time,
+      fetched_at: Time.now
+    )
+    Git::Pkgs::Models::VulnerabilityPackage.create(
+      vulnerability_id: withdrawn_vuln.id,
+      ecosystem: "npm",
+      package_name: "lodash",
+      vulnerable_range: "< 4.17.21"
+    )
+
+    output = capture_stdout do
+      Git::Pkgs::Commands::Vulns::History.new(["lodash"]).run
+    end
+
+    assert_includes output, "GHSA-with-date withdrawn"
   end
 end

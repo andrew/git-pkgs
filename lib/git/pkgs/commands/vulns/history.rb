@@ -209,15 +209,16 @@ module Git
 
           changes.each do |change|
             affected_vulns = vuln_pkgs.select do |vp|
-              next false if vp.vulnerability&.withdrawn?
               change.requirement && vp.affects_version?(change.requirement)
             end
 
-            vuln_info = if affected_vulns.any?
-                          "(vulnerable to #{affected_vulns.map { |vp| vp.vulnerability_id }.join(", ")})"
-                        else
-                          ""
-                        end
+            active_vulns = affected_vulns.reject { |vp| vp.vulnerability&.withdrawn? }
+            withdrawn_vulns = affected_vulns.select { |vp| vp.vulnerability&.withdrawn? }
+
+            vuln_parts = []
+            vuln_parts << "vulnerable to #{active_vulns.map(&:vulnerability_id).join(", ")}" if active_vulns.any?
+            vuln_parts << "#{withdrawn_vulns.map(&:vulnerability_id).join(", ")} withdrawn" if withdrawn_vulns.any?
+            vuln_info = vuln_parts.any? ? "(#{vuln_parts.join("; ")})" : ""
 
             event = {
               date: change.commit.committed_at,
@@ -225,21 +226,31 @@ module Git
               description: "#{change.change_type.capitalize} #{package_name} #{change.requirement} #{vuln_info}".strip,
               version: change.requirement,
               commit: format_commit_info(change.commit),
-              affected_vulns: affected_vulns.map(&:vulnerability_id)
+              affected_vulns: active_vulns.map(&:vulnerability_id),
+              withdrawn_vulns: withdrawn_vulns.map(&:vulnerability_id)
             }
 
             timeline << event
           end
 
           vuln_pkgs.each do |vp|
-            next unless vp.vulnerability&.published_at
-            next if vp.vulnerability.withdrawn?
+            vuln = vp.vulnerability
+            next unless vuln&.published_at
 
+            withdrawn_note = vuln.withdrawn? ? " [withdrawn]" : ""
             timeline << {
-              date: vp.vulnerability.published_at,
+              date: vuln.published_at,
               event_type: :cve_published,
-              description: "#{vp.vulnerability_id} published (#{vp.vulnerability.severity || "unknown"} severity)"
+              description: "#{vp.vulnerability_id} published (#{vuln.severity || "unknown"} severity)#{withdrawn_note}"
             }
+
+            if vuln.withdrawn? && vuln.withdrawn_at
+              timeline << {
+                date: vuln.withdrawn_at,
+                event_type: :cve_withdrawn,
+                description: "#{vp.vulnerability_id} withdrawn"
+              }
+            end
           end
 
           timeline = filter_timeline_by_date(timeline)
@@ -316,6 +327,7 @@ module Git
 
             colored_line = case event[:event_type]
                            when :cve_published then Color.yellow(line)
+                           when :cve_withdrawn then Color.cyan(line)
                            when :added
                              event[:affected_vulns]&.any? ? Color.red(line) : line
                            when :modified

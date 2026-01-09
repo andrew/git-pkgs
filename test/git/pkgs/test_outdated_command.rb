@@ -85,7 +85,7 @@ class Git::Pkgs::TestOutdatedCommand < Minitest::Test
     commit("Add package-lock.json")
 
     # Stub the ecosystems API
-    stub_request(:post, "https://packages.ecosyste.ms/api/v1/packages/lookup")
+    stub_request(:post, "https://packages.ecosyste.ms/api/v1/packages/bulk_lookup")
       .to_return(
         status: 200,
         body: [
@@ -130,7 +130,7 @@ class Git::Pkgs::TestOutdatedCommand < Minitest::Test
     JSON
     commit("Add package-lock.json")
 
-    stub_request(:post, "https://packages.ecosyste.ms/api/v1/packages/lookup")
+    stub_request(:post, "https://packages.ecosyste.ms/api/v1/packages/bulk_lookup")
       .to_return(
         status: 200,
         body: [
@@ -164,7 +164,7 @@ class Git::Pkgs::TestOutdatedCommand < Minitest::Test
     JSON
     commit("Add package-lock.json")
 
-    stub_request(:post, "https://packages.ecosyste.ms/api/v1/packages/lookup")
+    stub_request(:post, "https://packages.ecosyste.ms/api/v1/packages/bulk_lookup")
       .to_return(
         status: 200,
         body: [{ "purl" => "pkg:npm/lodash", "latest_release_number" => "4.17.21" }].to_json,
@@ -198,7 +198,7 @@ class Git::Pkgs::TestOutdatedCommand < Minitest::Test
     JSON
     commit("Add package-lock.json")
 
-    stub_request(:post, "https://packages.ecosyste.ms/api/v1/packages/lookup")
+    stub_request(:post, "https://packages.ecosyste.ms/api/v1/packages/bulk_lookup")
       .to_return(
         status: 200,
         body: [{ "purl" => "pkg:npm/lodash", "latest_release_number" => "4.17.21" }].to_json,

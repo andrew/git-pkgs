@@ -29,7 +29,7 @@ module Git
         results = {}
 
         purls.each_slice(BATCH_SIZE) do |batch|
-          response = post("/packages/lookup", { purl: batch })
+          response = post("/packages/bulk_lookup", { purls: batch })
           (response || []).each do |pkg|
             results[pkg["purl"]] = pkg if pkg["purl"]
           end

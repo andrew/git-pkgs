@@ -94,7 +94,7 @@ class Git::Pkgs::TestLicensesCommand < Minitest::Test
     JSON
     commit("Add package-lock.json")
 
-    stub_request(:post, "https://packages.ecosyste.ms/api/v1/packages/lookup")
+    stub_request(:post, "https://packages.ecosyste.ms/api/v1/packages/bulk_lookup")
       .to_return(
         status: 200,
         body: [
@@ -129,7 +129,7 @@ class Git::Pkgs::TestLicensesCommand < Minitest::Test
     JSON
     commit("Add package-lock.json")
 
-    stub_request(:post, "https://packages.ecosyste.ms/api/v1/packages/lookup")
+    stub_request(:post, "https://packages.ecosyste.ms/api/v1/packages/bulk_lookup")
       .to_return(
         status: 200,
         body: [{ "purl" => "pkg:npm/lodash", "normalized_licenses" => ["MIT"] }].to_json,
@@ -162,7 +162,7 @@ class Git::Pkgs::TestLicensesCommand < Minitest::Test
     JSON
     commit("Add package-lock.json")
 
-    stub_request(:post, "https://packages.ecosyste.ms/api/v1/packages/lookup")
+    stub_request(:post, "https://packages.ecosyste.ms/api/v1/packages/bulk_lookup")
       .to_return(
         status: 200,
         body: [{ "purl" => "pkg:npm/lodash", "normalized_licenses" => ["MIT"] }].to_json,
@@ -194,7 +194,7 @@ class Git::Pkgs::TestLicensesCommand < Minitest::Test
     JSON
     commit("Add package-lock.json")
 
-    stub_request(:post, "https://packages.ecosyste.ms/api/v1/packages/lookup")
+    stub_request(:post, "https://packages.ecosyste.ms/api/v1/packages/bulk_lookup")
       .to_return(
         status: 200,
         body: [{ "purl" => "pkg:npm/gpl-package", "normalized_licenses" => ["GPL-3.0"] }].to_json,
@@ -224,7 +224,7 @@ class Git::Pkgs::TestLicensesCommand < Minitest::Test
     JSON
     commit("Add package-lock.json")
 
-    stub_request(:post, "https://packages.ecosyste.ms/api/v1/packages/lookup")
+    stub_request(:post, "https://packages.ecosyste.ms/api/v1/packages/bulk_lookup")
       .to_return(
         status: 200,
         body: [

@@ -202,9 +202,9 @@ module Git
         end
 
         def output_text(vulns)
-          max_severity = vulns.map { |v| (v[:severity] || "").length }.max
-          max_id = vulns.map { |v| v[:id].length }.max
-          max_pkg = vulns.map { |v| v[:package_name].length }.max
+          max_severity = vulns.map { |v| (v[:severity] || "").length }.max || 8
+          max_id = vulns.map { |v| v[:id].length }.max || 15
+          max_pkg = vulns.map { |v| v[:package_name].length }.max || 20
 
           vulns.each do |vuln|
             severity = (vuln[:severity] || "unknown").upcase.ljust(max_severity)

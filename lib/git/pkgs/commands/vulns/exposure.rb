@@ -350,8 +350,8 @@ module Git
         def output_stats_table(rows)
           return if rows.empty?
 
-          max_label = rows.map { |r| r[0].length }.max
-          max_value = rows.map { |r| r[1].length }.max
+          max_label = rows.map { |r| r[0].length }.max || 20
+          max_value = rows.map { |r| r[1].length }.max || 10
 
           width = max_label + max_value + 7
           border = "+" + ("-" * (width - 2)) + "+"

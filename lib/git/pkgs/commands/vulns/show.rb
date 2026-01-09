@@ -126,7 +126,8 @@ module Git
             puts "References:"
             refs = begin
               JSON.parse(vuln.references)
-            rescue JSON::ParserError
+            rescue JSON::ParserError => e
+              $stderr.puts "Warning: Could not parse references for #{vuln.id}: #{e.message}" unless Git::Pkgs.quiet
               []
             end
             refs.each do |ref|

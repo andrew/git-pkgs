@@ -201,7 +201,9 @@ module Git
 
           client = EcosystemsClient.new
           begin
-            results = client.bulk_lookup(stale_purls)
+            results = Spinner.with_spinner("Fetching package metadata...") do
+              client.bulk_lookup(stale_purls)
+            end
             results.each do |purl, data|
               packages_by_purl[purl]&.enrich_from_api(data)
             end

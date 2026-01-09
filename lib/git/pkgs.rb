@@ -11,6 +11,7 @@ require_relative "pkgs/analyzer"
 require_relative "pkgs/ecosystems"
 require_relative "pkgs/osv_client"
 require_relative "pkgs/ecosystems_client"
+require_relative "pkgs/spinner"
 
 require_relative "pkgs/purl_helper"
 require_relative "pkgs/models/branch"

@@ -8,6 +8,8 @@ A git subcommand for tracking package dependencies across git history. Analyzes 
 
 Your lockfile shows what dependencies you have, but it doesn't show how you got here, and `git log Gemfile.lock` is useless noise. git-pkgs indexes your dependency history into a queryable database so you can ask questions like: when did we add this? who added it? what changed between these two releases? has anyone touched this in the last year?
 
+For best results, commit your lockfiles. Manifests show version ranges but lockfiles show what actually got installed, including transitive dependencies.
+
 It works across many ecosystems (Gemfile, package.json, Dockerfile, GitHub Actions workflows) giving you one unified history instead of separate tools per ecosystem. Everything runs locally and offline with no external services or network calls, and the database lives in your `.git` directory where you can use it in CI to catch dependency changes in pull requests.
 
 ## Installation

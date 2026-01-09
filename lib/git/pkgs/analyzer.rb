@@ -12,22 +12,22 @@ module Git
       QUICK_MANIFEST_PATTERNS = %w[
         Gemfile Gemfile.lock gems.rb gems.locked *.gemspec
         package.json package-lock.json yarn.lock npm-shrinkwrap.json pnpm-lock.yaml bun.lock npm-ls.json
-        setup.py req*.txt req*.pip requirements/*.txt requirements/*.pip requirements.frozen
-        Pipfile Pipfile.lock pyproject.toml poetry.lock uv.lock pylock.toml
+        setup.py req*.txt req*.pip requirements/*.txt requirements/*.pip requirements*.in requirements.frozen
+        Pipfile Pipfile.lock pyproject.toml poetry.lock uv.lock pylock.toml pdm.lock
         pip-resolved-dependencies.txt pip-dependency-graph.json
-        pom.xml ivy.xml build.gradle build.gradle.kts gradle-dependencies-q.txt
+        pom.xml ivy.xml build.gradle build.gradle.kts gradle-dependencies-q.txt gradle.lockfile verification-metadata.xml
         maven-resolved-dependencies.txt sbt-update-full.txt maven-dependency-tree.txt maven-dependency-tree.dot
         Cargo.toml Cargo.lock
-        go.mod glide.yaml glide.lock Godeps Godeps/Godeps.json
+        go.mod go.sum glide.yaml glide.lock Godeps Godeps/Godeps.json
         vendor/manifest vendor/vendor.json Gopkg.toml Gopkg.lock go-resolved-dependencies.json
         composer.json composer.lock
         Podfile Podfile.lock *.podspec *.podspec.json
         packages.config packages.lock.json Project.json Project.lock.json
-        *.nuspec paket.lock *.csproj project.assets.json
+        *.nuspec paket.lock *.csproj project.assets.json *.deps.json
         bower.json bentofile.yaml
-        META.json META.yml
+        META.json META.yml cpanfile cpanfile.snapshot Makefile.PL Build.PL
         environment.yml environment.yaml
-        cog.yaml versions.json MLmodel DESCRIPTION
+        cog.yaml versions.json MLmodel DESCRIPTION renv.lock
         pubspec.yaml pubspec.lock
         dub.json dub.sdl
         REQUIRE
@@ -36,9 +36,19 @@ module Git
         haxelib.json
         action.yml action.yaml .github/workflows/*.yml .github/workflows/*.yaml
         Dockerfile docker-compose*.yml docker-compose*.yaml
-        dvc.yaml vcpkg.json
+        dvc.yaml vcpkg.json _generated-vcpkg-list.json
         Brewfile Brewfile.lock.json
         Modelfile
+        deno.json deno.jsonc deno.lock
+        conanfile.py conanfile.txt conan.lock
+        *.rockspec
+        *.nimble
+        *.cabal *cabal.config stack.yaml.lock
+        Cartfile Cartfile.private Cartfile.resolved
+        project.clj
+        Package.swift Package.resolved
+        mix.exs mix.lock
+        flake.nix flake.lock nix/sources.json npins/sources.json
       ].freeze
 
       QUICK_MANIFEST_REGEX = Regexp.union(

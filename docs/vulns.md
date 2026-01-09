@@ -94,7 +94,7 @@ CRITICAL  CVE-2024-1234  lodash 4.17.15      abc1234  2024-03-15  Alice   "Add u
 HIGH      GHSA-xxxx      express 4.18.0      def5678  2024-02-01  [bot]   "Bump express"  [ongoing]
 ```
 
-Options: `-e`, `-s`, `-b`, `-f`, `--all-time`
+Options: `-e`, `-s`, `-r`, `-b`, `-f`, `--all-time`
 
 ### praise
 
@@ -166,7 +166,7 @@ $ git pkgs vulns exposure --all-time --summary
 +----------------------------------+
 ```
 
-Options: `-e`, `-s`, `-b`, `-f`, `--summary`, `--all-time`
+Options: `-e`, `-s`, `-r`, `-b`, `-f`, `--summary`, `--all-time`
 
 ### diff
 
@@ -244,7 +244,7 @@ Your exposure:
     Fixed: ghi9012 2024-04-01 Bob "Bump lodash for CVE-2024-1234"
 ```
 
-Options: `-f`, `-b`
+Options: `-r`, `-b`, `-f`
 
 ## Syncing Vulnerability Data
 

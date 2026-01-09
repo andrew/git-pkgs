@@ -124,8 +124,9 @@ module Git
             ref1 = "HEAD~1"
             ref2 = "HEAD"
           elsif ref2.nil?
-            ref2 = ref1
-            ref1 = "HEAD"
+            # Single ref given: compare FROM that ref TO HEAD
+            # e.g., `git pkgs vulns diff HEAD~10` shows changes since HEAD~10
+            ref2 = "HEAD"
           end
 
           if ref1.include?("...")

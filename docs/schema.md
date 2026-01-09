@@ -102,6 +102,63 @@ Stores the complete dependency state at each commit that has changes. Enables O(
 
 Indexes: `(commit_id, manifest_id, name)` (unique), `name`, `platform`
 
+### packages
+
+Tracks packages for vulnerability sync status.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | integer | Primary key |
+| purl | string | Package URL (e.g., "pkg:gem/rails") |
+| ecosystem | string | Package manager (e.g., "rubygems") |
+| name | string | Package name |
+| latest_version | string | Latest known version (optional) |
+| license | string | License identifier (optional) |
+| description | text | Package description (optional) |
+| homepage | string | Homepage URL (optional) |
+| repository_url | string | Source repository URL (optional) |
+| source | string | Data source (optional) |
+| enriched_at | datetime | When package metadata was enriched |
+| vulns_synced_at | datetime | When vulnerabilities were last synced from OSV |
+| created_at | datetime | |
+| updated_at | datetime | |
+
+Indexes: `purl` (unique)
+
+### vulnerabilities
+
+Caches vulnerability data from OSV.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | string | Primary key (CVE-2024-1234, GHSA-xxxx, etc.) |
+| aliases | text | Comma-separated alternative IDs for the same vulnerability |
+| severity | string | critical, high, medium, or low |
+| cvss_score | float | CVSS numeric score (0.0-10.0) |
+| cvss_vector | string | Full CVSS vector string |
+| references | text | JSON array of {type, url} objects |
+| summary | text | Short description |
+| details | text | Full vulnerability details |
+| published_at | datetime | When the vulnerability was disclosed |
+| withdrawn_at | datetime | When the vulnerability was retracted (if ever) |
+| modified_at | datetime | When the OSV record was last modified |
+| fetched_at | datetime | When we last fetched from OSV |
+
+### vulnerability_packages
+
+Maps which packages are affected by each vulnerability.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | integer | Primary key |
+| vulnerability_id | string | Foreign key to vulnerabilities |
+| ecosystem | string | OSV ecosystem name (e.g., "RubyGems") |
+| package_name | string | Package name |
+| affected_versions | text | Version range expression (e.g., "<4.17.21") |
+| fixed_versions | text | Comma-separated list of fixed versions |
+
+Indexes: `(ecosystem, package_name)`, `vulnerability_id`, `(vulnerability_id, ecosystem, package_name)` (unique)
+
 ## Relationships
 
 ```
@@ -112,4 +169,6 @@ branches ──┬── branch_commits ──┬── commits
            │                    └── dependency_snapshots ── manifests
            │
            └── last_analyzed_sha (references commits.sha)
+
+vulnerabilities ──── vulnerability_packages
 ```

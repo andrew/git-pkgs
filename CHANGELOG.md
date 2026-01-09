@@ -1,8 +1,19 @@
 ## [Unreleased]
 
+## [0.7.0] - 2026-01-09
+
+- `git pkgs vulns` subcommand for vulnerability scanning via OSV API
+- `git pkgs vulns scan` to scan dependencies for known vulnerabilities
+- `git pkgs vulns show` to display details for a specific vulnerability
+- `git pkgs vulns sync` to prefetch vulnerability data for all packages
+- `git pkgs vulns exposure` to analyze vulnerability exposure over time
+- `git pkgs vulns praise` to show resolved vulnerabilities with attribution
+- SARIF output format for CI integration (`--format=sarif`)
+- Docker container support for running git-pkgs without local Ruby installation
+- `list` command now shows locked versions and manifest kind
 - `--stateless` flag for `list`, `show`, and `diff` commands (auto-enabled when no database exists)
+- Update ecosystems-bibliothecary to ~> 15.2
 - Fix `-f` flag conflict in `diff` command (was defined for both `--from` and `--format`)
-- Disable GPG signing in test suite for faster tests
 
 ## [0.6.2] - 2026-01-06
 

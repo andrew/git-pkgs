@@ -45,6 +45,8 @@ git pkgs history rails  # track a specific package
 git pkgs why rails      # why was this added?
 git pkgs diff --from=HEAD~10  # what changed recently?
 git pkgs diff --from=main --to=feature  # compare branches
+git pkgs vulns          # scan for known CVEs
+git pkgs vulns blame    # who introduced each vulnerability
 ```
 
 ## Commands
@@ -261,15 +263,40 @@ Shows dependencies sorted by how long since they were last changed in your repo.
 
 ### Vulnerability scanning
 
+Scan dependencies for known CVEs using the [OSV database](https://osv.dev). Because git-pkgs tracks the full history of every dependency change, it provides context that static scanners can't: who introduced a vulnerability, when it was fixed, and how long you were exposed.
+
 ```bash
-git pkgs vulns                  # scan current dependencies for known CVEs
+git pkgs vulns                  # scan current dependencies
+git pkgs vulns v1.0.0           # scan at a tag, branch, or commit
 git pkgs vulns -s high          # only critical and high severity
-git pkgs vulns blame            # who introduced each vulnerability
-git pkgs vulns praise           # who fixed vulnerabilities
-git pkgs vulns exposure --all-time --summary  # remediation metrics
+git pkgs vulns -e npm           # filter by ecosystem
+git pkgs vulns -f sarif         # output for GitHub code scanning
 ```
 
-Uses the [OSV database](https://osv.dev) to check your dependencies against known security advisories. Because git-pkgs tracks the full history, it can show who introduced and fixed each vulnerability. See [docs/vulns.md](docs/vulns.md) for full documentation.
+Subcommands for historical analysis:
+
+```bash
+git pkgs vulns blame            # who introduced each vulnerability
+git pkgs vulns blame --all-time # include fixed vulnerabilities
+git pkgs vulns praise           # who fixed vulnerabilities
+git pkgs vulns praise --summary # author leaderboard
+git pkgs vulns exposure         # remediation metrics (CRA compliance)
+git pkgs vulns diff main feature # compare vulnerability state between refs
+git pkgs vulns log              # commits that introduced or fixed vulns
+git pkgs vulns history lodash   # vulnerability timeline for a package
+git pkgs vulns show CVE-2024-1234  # details about a specific CVE
+```
+
+Output formats: `text` (default), `json`, and `sarif`. SARIF integrates with GitHub Advanced Security:
+
+```yaml
+- run: git pkgs vulns --stateless -f sarif > results.sarif
+- uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: results.sarif
+```
+
+Vulnerability data is cached locally and refreshed automatically when stale (>24h). Use `git pkgs vulns sync --refresh` to force an update. See [docs/vulns.md](docs/vulns.md) for full documentation.
 
 ### Diff between commits
 

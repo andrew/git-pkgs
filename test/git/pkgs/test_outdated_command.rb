@@ -51,11 +51,26 @@ class Git::Pkgs::TestOutdatedCommand < Minitest::Test
     assert_equal :minor, cmd.classify_update("v1.0.0", "1.1.0")
   end
 
-  def test_classify_update_unknown_format
+  def test_classify_update_invalid_format
     cmd = Git::Pkgs::Commands::Outdated.new([])
 
-    assert_equal :unknown, cmd.classify_update("abc", "def")
-    assert_equal :unknown, cmd.classify_update("", "1.0.0")
+    assert_nil cmd.classify_update("abc", "def")
+    assert_nil cmd.classify_update("", "1.0.0")
+  end
+
+  def test_classify_update_downgrade_returns_nil
+    cmd = Git::Pkgs::Commands::Outdated.new([])
+
+    assert_nil cmd.classify_update("2.0.0", "1.0.0")
+    assert_nil cmd.classify_update("1.5.0", "1.4.0")
+    assert_nil cmd.classify_update("1.0.5", "1.0.4")
+    assert_nil cmd.classify_update("2.0.0", "1.5.0")
+  end
+
+  def test_classify_update_same_version_returns_nil
+    cmd = Git::Pkgs::Commands::Outdated.new([])
+
+    assert_nil cmd.classify_update("1.0.0", "1.0.0")
   end
 
   def test_parse_version

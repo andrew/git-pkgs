@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 - Auto-upgrade outdated database schemas instead of erroring
+- Fix `outdated` command suggesting downgrades when current version is newer than registry
 
 ## [0.9.0] - 2026-01-14
 

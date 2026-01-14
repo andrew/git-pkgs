@@ -115,6 +115,7 @@ module Git
             next if current == latest
 
             update_type = classify_update(current, latest)
+            next unless update_type
             next if @options[:major_only] && update_type != :major
             next if @options[:minor_only] && update_type == :patch
 
@@ -129,7 +130,7 @@ module Git
             return
           end
 
-          type_order = { major: 0, minor: 1, patch: 2, unknown: 3 }
+          type_order = { major: 0, minor: 1, patch: 2 }
           outdated.sort_by! { |o| [type_order[o[:update_type]], o[:name]] }
 
           if @options[:format] == "json"
@@ -173,16 +174,15 @@ module Git
           current_parts = parse_version(current)
           latest_parts = parse_version(latest)
 
-          return :unknown if current_parts.nil? || latest_parts.nil?
+          return nil if current_parts.nil? || latest_parts.nil?
+          return nil if (current_parts <=> latest_parts) >= 0
 
           if latest_parts[0] > current_parts[0]
             :major
           elsif latest_parts[1] > current_parts[1]
             :minor
-          elsif latest_parts[2] > current_parts[2]
-            :patch
           else
-            :unknown
+            :patch
           end
         end
 

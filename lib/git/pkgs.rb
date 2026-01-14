@@ -49,12 +49,14 @@ require_relative "pkgs/commands/completions"
 require_relative "pkgs/commands/vulns"
 require_relative "pkgs/commands/outdated"
 require_relative "pkgs/commands/licenses"
+require_relative "pkgs/commands/integrity"
 
 module Git
   module Pkgs
     class Error < StandardError; end
     class NotInitializedError < Error; end
     class NotInGitRepoError < Error; end
+    class SchemaVersionError < Error; end
 
     class << self
       attr_accessor :quiet, :git_dir, :work_tree, :db_path, :batch_size, :snapshot_interval, :threads

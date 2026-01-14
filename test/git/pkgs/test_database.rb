@@ -75,40 +75,17 @@ class Git::Pkgs::TestDatabase < Minitest::Test
     refute Git::Pkgs::Database.needs_upgrade?
   end
 
-  def test_check_version_migrates_old_schema
+  def test_check_version_raises_for_old_schema
     Git::Pkgs::Database.connect(@git_dir, check_version: false)
     Git::Pkgs::Database.create_schema
     Git::Pkgs::Database.set_version(1)
 
     assert Git::Pkgs::Database.needs_upgrade?
-    Git::Pkgs::Database.check_version!
-    refute Git::Pkgs::Database.needs_upgrade?
-    assert_equal Git::Pkgs::Database::SCHEMA_VERSION, Git::Pkgs::Database.stored_version
-  end
-
-  def test_migrate_to_v2_adds_vuln_tables
-    Git::Pkgs::Database.connect(@git_dir, check_version: false)
-
-    # Create only v1 tables manually
-    db = Git::Pkgs::Database.db
-    db.create_table(:schema_info) { Integer :version }
-    db.create_table(:branches) { primary_key :id; String :name }
-    db.create_table(:commits) { primary_key :id; String :sha }
-    db.create_table(:branch_commits) { primary_key :id }
-    db.create_table(:manifests) { primary_key :id; String :path }
-    db.create_table(:dependency_changes) { primary_key :id; String :name }
-    db.create_table(:dependency_snapshots) { primary_key :id; String :name }
-    Git::Pkgs::Database.set_version(1)
-
-    refute db.table_exists?(:packages)
-    refute db.table_exists?(:vulnerabilities)
-
-    Git::Pkgs::Database.migrate!
-
-    assert db.table_exists?(:packages)
-    assert db.table_exists?(:vulnerabilities)
-    assert db.table_exists?(:vulnerability_packages)
-    assert_equal Git::Pkgs::Database::SCHEMA_VERSION, Git::Pkgs::Database.stored_version
+    error = assert_raises(Git::Pkgs::SchemaVersionError) do
+      Git::Pkgs::Database.check_version!
+    end
+    assert_match(/v1.*v#{Git::Pkgs::Database::SCHEMA_VERSION}/, error.message)
+    assert_match(/git pkgs upgrade/, error.message)
   end
 
   def test_create_schema_creates_vuln_tables

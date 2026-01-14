@@ -47,7 +47,53 @@ module Git
         results[purl]
       end
 
+      # Lookup a specific version by purl with version.
+      # Returns version-level data including integrity hash.
+      #
+      # @param purl [String] package URL with version (e.g., "pkg:gem/rake@13.3.1")
+      # @return [Hash, nil] version data or nil if not found
+      def lookup_version(purl)
+        parsed = Purl.parse(purl)
+        return nil unless parsed.version
+
+        url = parsed.ecosystems_version_api_url
+        return nil unless url
+
+        fetch_url(url)
+      rescue Purl::InvalidPurl
+        nil
+      end
+
+      # Batch lookup versions by purl.
+      # Fetches each version individually (no batch API for versions).
+      #
+      # @param purls [Array<String>] array of versioned package URLs
+      # @return [Hash<String, Hash>] hash keyed by purl with version data
+      def bulk_lookup_versions(purls)
+        results = {}
+        purls.each do |purl|
+          data = lookup_version(purl)
+          results[purl] = data if data
+        end
+        results
+      end
+
       private
+
+      def fetch_url(url)
+        uri = URI(url)
+        request = Net::HTTP::Get.new(uri)
+        request["Accept"] = "application/json"
+        execute_request(uri, request)
+      end
+
+      def get(path)
+        uri = URI("#{API_BASE}#{path}")
+        request = Net::HTTP::Get.new(uri)
+        request["Accept"] = "application/json"
+
+        execute_request(uri, request)
+      end
 
       def post(path, payload)
         uri = URI("#{API_BASE}#{path}")

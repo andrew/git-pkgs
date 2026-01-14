@@ -191,6 +191,7 @@ module Git
                     ecosystem: s[:ecosystem],
                     requirement: s[:requirement],
                     dependency_type: s[:dependency_type],
+                    integrity: s[:integrity],
                     created_at: now,
                     updated_at: now
                   }
@@ -266,7 +267,8 @@ module Git
                     name: name,
                     ecosystem: dep_info[:ecosystem],
                     requirement: dep_info[:requirement],
-                    dependency_type: dep_info[:dependency_type]
+                    dependency_type: dep_info[:dependency_type],
+                    integrity: dep_info[:integrity]
                   }
                 end
                 snapshots_stored += snapshot.size
@@ -286,7 +288,8 @@ module Git
                   name: name,
                   ecosystem: dep_info[:ecosystem],
                   requirement: dep_info[:requirement],
-                  dependency_type: dep_info[:dependency_type]
+                  dependency_type: dep_info[:dependency_type],
+                  integrity: dep_info[:integrity]
                 }
               end
               snapshots_stored += snapshot.size

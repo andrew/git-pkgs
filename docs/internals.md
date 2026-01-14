@@ -19,7 +19,7 @@ The schema has ten tables. Six handle dependency tracking:
 - `branch_commits` is a join table preserving commit order within each branch
 - `manifests` stores file paths with their ecosystem (npm, rubygems, etc.) and kind (manifest vs lockfile)
 - `dependency_changes` records every add, modify, or remove event
-- `dependency_snapshots` stores full dependency state at intervals
+- `dependency_snapshots` stores full dependency state at intervals, including lockfile integrity hashes
 
 Four more support vulnerability scanning and package enrichment:
 
@@ -226,6 +226,25 @@ The `licenses` command checks licenses against configured policies:
 - `--unknown` flags packages with no license information
 
 The command exits with code 1 when violations are found, making it suitable for CI pipelines.
+
+## Integrity Verification
+
+The `integrity` command shows SHA256 hashes from lockfiles. Modern lockfiles include checksums: Gemfile.lock has a CHECKSUMS section, package-lock.json has integrity fields. These hashes verify that the exact package content matches what was originally resolved.
+
+The `dependency_snapshots` table stores integrity alongside other dependency data. During `init` and `update`, bibliothecary extracts the integrity field from parsed lockfiles and git-pkgs stores it with each snapshot.
+
+The `--drift` flag does two things:
+
+1. **Internal drift** - detects when the same package@version has different integrity hashes across your history. This shouldn't happen under normal circumstances and could indicate:
+   - A dependency was republished with different content (rare but possible on some registries)
+   - A supply chain attack replaced a package
+   - Lockfile corruption or manual editing
+
+2. **Registry mismatch** - compares lockfile hashes against the registry's published integrity via the ecosyste.ms API. A mismatch here is more serious: either your lockfile has been tampered with, or the registry itself has different content than what you resolved.
+
+Internal drift queries the database for unique (purl, integrity) pairs and flags purls with multiple different values. Registry comparison fetches each version's integrity from ecosyste.ms (using the purl gem's `ecosystems_version_api_url` method) and compares against the lockfile value.
+
+Unlike the `outdated` and `licenses` commands which are entirely extrinsic, integrity verification is primarily intrinsic (lockfile hashes come from your git history) with optional extrinsic comparison when using `--drift`.
 
 ## Models
 

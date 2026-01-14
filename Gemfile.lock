@@ -8,8 +8,8 @@ PATH
   remote: .
   specs:
     git-pkgs (0.8.0)
-      ecosystems-bibliothecary (~> 15.2)
-      purl (~> 1.7)
+      ecosystems-bibliothecary (~> 15.3)
+      purl (~> 1.7, >= 1.7.1)
       rugged (~> 1.0)
       sarif-ruby
       sequel (>= 5.0)
@@ -29,7 +29,7 @@ GEM
     csv (3.3.5)
     date (3.5.1)
     docile (1.4.1)
-    ecosystems-bibliothecary (15.2.0)
+    ecosystems-bibliothecary (15.3.0)
       bundler
       csv
       json (~> 2.8)
@@ -58,16 +58,16 @@ GEM
     pp (0.6.3)
       prettyprint
     prettyprint (0.2.0)
-    prism (1.7.0)
+    prism (1.8.0)
     psych (5.3.1)
       date
       stringio
     public_suffix (7.0.2)
-    purl (1.7.0)
+    purl (1.7.1)
       addressable (~> 2.8)
     racc (1.8.1)
     rake (13.3.1)
-    rdoc (7.0.3)
+    rdoc (7.1.0)
       erb
       psych (>= 4.0.0)
       tsort
@@ -98,7 +98,7 @@ GEM
     stringio (3.2.0)
     tomlrb (2.0.4)
     tsort (0.2.0)
-    vers (1.0.2)
+    vers (1.0.3)
     webmock (3.26.1)
       addressable (>= 2.8.0)
       crack (>= 0.3.2)
@@ -136,7 +136,7 @@ CHECKSUMS
   csv (3.3.5) sha256=6e5134ac3383ef728b7f02725d9872934f523cb40b961479f69cf3afa6c8e73f
   date (3.5.1) sha256=750d06384d7b9c15d562c76291407d89e368dda4d4fff957eb94962d325a0dc0
   docile (1.4.1) sha256=96159be799bfa73cdb721b840e9802126e4e03dfc26863db73647204c727f21e
-  ecosystems-bibliothecary (15.2.0) sha256=bef81a0175f8bdf1d61938d5d5d32e226ec4ff44a54d5d5d34faea663ed67a24
+  ecosystems-bibliothecary (15.3.0) sha256=dc3c8caa3218bf833beba9e3eb8cbeb35987f771532ff0eab87fbcdfb30ce4eb
   erb (6.0.1) sha256=28ecdd99c5472aebd5674d6061e3c6b0a45c049578b071e5a52c2a7f13c197e5
   git-pkgs (0.8.0)
   hana (1.3.7) sha256=5425db42d651fea08859811c29d20446f16af196308162894db208cac5ce9b0d
@@ -150,13 +150,13 @@ CHECKSUMS
   ox (2.14.23) sha256=4a9aedb4d6c78c5ebac1d7287dc7cc6808e14a8831d7adb727438f6a1b461b66
   pp (0.6.3) sha256=2951d514450b93ccfeb1df7d021cae0da16e0a7f95ee1e2273719669d0ab9df6
   prettyprint (0.2.0) sha256=2bc9e15581a94742064a3cc8b0fb9d45aae3d03a1baa6ef80922627a0766f193
-  prism (1.7.0) sha256=10062f734bf7985c8424c44fac382ac04a58124ea3d220ec3ba9fe4f2da65103
+  prism (1.8.0) sha256=84453a16ef5530ea62c5f03ec16b52a459575ad4e7b9c2b360fd8ce2c39c1254
   psych (5.3.1) sha256=eb7a57cef10c9d70173ff74e739d843ac3b2c019a003de48447b2963d81b1974
   public_suffix (7.0.2) sha256=9114090c8e4e7135c1fd0e7acfea33afaab38101884320c65aaa0ffb8e26a857
-  purl (1.7.0) sha256=e25a6b951975e94104a17d8d40e8529fa882a5a63717c68af2390e9b8d0ac3f2
+  purl (1.7.1) sha256=459aecf3e0e2199bdfafa2885731b39af7c081dcd1d63d7ec036aab732e56ed3
   racc (1.8.1) sha256=4a7f6929691dbec8b5209a0b373bc2614882b55fc5d2e447a21aaa691303d62f
   rake (13.3.1) sha256=8c9e89d09f66a26a01264e7e3480ec0607f0c497a861ef16063604b1b08eb19c
-  rdoc (7.0.3) sha256=dfe3d0981d19b7bba71d9dbaeb57c9f4e3a7a4103162148a559c4fc687ea81f9
+  rdoc (7.1.0) sha256=494899df0706c178596ca6e1d50f1b7eb285a9b2aae715be5abd742734f17363
   regexp_parser (2.11.3) sha256=ca13f381a173b7a93450e53459075c9b76a10433caadcb2f1180f2c741fc55a4
   reline (0.6.3) sha256=1198b04973565b36ec0f11542ab3f5cfeeec34823f4e54cebde90968092b1835
   rexml (3.4.4) sha256=19e0a2c3425dfbf2d4fc1189747bdb2f849b6c5e74180401b15734bc97b5d142
@@ -180,7 +180,7 @@ CHECKSUMS
   stringio (3.2.0) sha256=c37cb2e58b4ffbd33fe5cd948c05934af997b36e0b6ca6fdf43afa234cf222e1
   tomlrb (2.0.4) sha256=262f77947ac3ac9b3366a0a5940ecd238300c553e2e14f22009e2afcd2181b99
   tsort (0.2.0) sha256=9650a793f6859a43b6641671278f79cfead60ac714148aabe4e3f0060480089f
-  vers (1.0.2) sha256=0ea9a63acbe1f197268c7da93f0708a4fc99bd88d86aa49dccf5b1b8d4c68de5
+  vers (1.0.3) sha256=d1ef5b0f146a23515ab94b0a6d7ad7338494f90af358857da83a7d8a9921bc89
   webmock (3.26.1) sha256=4f696fb57c90a827c20aadb2d4f9058bbff10f7f043bd0d4c3f58791143b1cd7
 
 BUNDLED WITH

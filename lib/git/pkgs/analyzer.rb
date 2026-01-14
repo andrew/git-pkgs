@@ -141,7 +141,8 @@ module Git
               purl: generate_purl(result[:platform], dep[:name]),
               change_type: "added",
               requirement: dep[:requirement],
-              dependency_type: dep[:type]
+              dependency_type: dep[:type],
+              integrity: dep[:integrity]
             }
 
             key = [manifest_path, dep[:name]]
@@ -150,7 +151,8 @@ module Git
               kind: result[:kind],
               purl: generate_purl(result[:platform], dep[:name]),
               requirement: dep[:requirement],
-              dependency_type: dep[:type]
+              dependency_type: dep[:type],
+              integrity: dep[:integrity]
             }
           end
         end
@@ -179,7 +181,8 @@ module Git
               purl: generate_purl(after_result[:platform], name),
               change_type: "added",
               requirement: dep[:requirement],
-              dependency_type: dep[:type]
+              dependency_type: dep[:type],
+              integrity: dep[:integrity]
             }
 
             key = [manifest_path, name]
@@ -188,7 +191,8 @@ module Git
               kind: after_result[:kind],
               purl: generate_purl(after_result[:platform], name),
               requirement: dep[:requirement],
-              dependency_type: dep[:type]
+              dependency_type: dep[:type],
+              integrity: dep[:integrity]
             }
           end
 
@@ -202,7 +206,8 @@ module Git
               purl: generate_purl(before_result[:platform], name),
               change_type: "removed",
               requirement: dep[:requirement],
-              dependency_type: dep[:type]
+              dependency_type: dep[:type],
+              integrity: dep[:integrity]
             }
 
             key = [manifest_path, name]
@@ -223,7 +228,8 @@ module Git
                 change_type: "modified",
                 requirement: after_dep[:requirement],
                 previous_requirement: before_dep[:requirement],
-                dependency_type: after_dep[:type]
+                dependency_type: after_dep[:type],
+                integrity: after_dep[:integrity]
               }
 
               key = [manifest_path, name]
@@ -232,7 +238,8 @@ module Git
                 kind: after_result[:kind],
                 purl: generate_purl(after_result[:platform], name),
                 requirement: after_dep[:requirement],
-                dependency_type: after_dep[:type]
+                dependency_type: after_dep[:type],
+                integrity: after_dep[:integrity]
               }
             end
           end
@@ -252,7 +259,8 @@ module Git
               purl: generate_purl(result[:platform], dep[:name]),
               change_type: "removed",
               requirement: dep[:requirement],
-              dependency_type: dep[:type]
+              dependency_type: dep[:type],
+              integrity: dep[:integrity]
             }
 
             key = [manifest_path, dep[:name]]
@@ -329,7 +337,8 @@ module Git
               kind: result[:kind],
               purl: generate_purl(result[:platform], dep[:name]),
               requirement: dep[:requirement],
-              dependency_type: dep[:type]
+              dependency_type: dep[:type],
+              integrity: dep[:integrity]
             }
           end
         end

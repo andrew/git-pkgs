@@ -35,7 +35,8 @@ module Git
           "stats" => "Show dependency statistics",
           "stale" => "Show dependencies that haven't been updated",
           "outdated" => "Show packages with newer versions available",
-          "licenses" => "Show licenses for dependencies"
+          "licenses" => "Show licenses for dependencies",
+          "integrity" => "Show and verify lockfile integrity hashes"
         },
         "Security" => {
           "vulns" => "Scan for known vulnerabilities"

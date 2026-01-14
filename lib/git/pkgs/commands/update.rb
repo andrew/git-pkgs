@@ -43,7 +43,8 @@ module Git
                 ecosystem: s.ecosystem,
                 purl: s.purl,
                 requirement: s.requirement,
-                dependency_type: s.dependency_type
+                dependency_type: s.dependency_type,
+                integrity: s.integrity
               }
             end
           end
@@ -110,6 +111,7 @@ module Git
                     s.purl = dep_info[:purl]
                     s.requirement = dep_info[:requirement]
                     s.dependency_type = dep_info[:dependency_type]
+                    s.integrity = dep_info[:integrity]
                   end
                 end
               end

@@ -106,4 +106,58 @@ class Git::Pkgs::TestAnalyzer < Minitest::Test
     # Manually check that merge detection works
     refute repo.merge_commit?(first_commit)
   end
+
+  def test_extracts_integrity_from_lockfile
+    lockfile = <<~LOCKFILE
+      GEM
+        remote: https://rubygems.org/
+        specs:
+          rake (13.0.6)
+
+      PLATFORMS
+        ruby
+
+      DEPENDENCIES
+        rake
+
+      CHECKSUMS
+        rake (13.0.6) sha256=7854c74f48e2e975969062833adc4013f249a4b212f5e7b9d5c040bf838d54bb
+
+      BUNDLED WITH
+         2.4.0
+    LOCKFILE
+
+    add_file("Gemfile.lock", lockfile)
+    commit("Add Gemfile.lock")
+
+    repo = Git::Pkgs::Repository.new(@test_dir)
+    analyzer = Git::Pkgs::Analyzer.new(repo)
+
+    commits = repo.walk("main").to_a
+    commit = commits[1]
+    result = analyzer.analyze_commit(commit)
+
+    refute_nil result
+    rake_change = result[:changes].find { |c| c[:name] == "rake" }
+    assert_equal "sha256=7854c74f48e2e975969062833adc4013f249a4b212f5e7b9d5c040bf838d54bb", rake_change[:integrity]
+
+    # Also check snapshot
+    rake_snapshot = result[:snapshot][["Gemfile.lock", "rake"]]
+    assert_equal "sha256=7854c74f48e2e975969062833adc4013f249a4b212f5e7b9d5c040bf838d54bb", rake_snapshot[:integrity]
+  end
+
+  def test_integrity_nil_for_manifest_without_checksums
+    add_file("Gemfile", sample_gemfile("rails" => "~> 7.0"))
+    commit("Add Gemfile")
+
+    repo = Git::Pkgs::Repository.new(@test_dir)
+    analyzer = Git::Pkgs::Analyzer.new(repo)
+
+    commits = repo.walk("main").to_a
+    commit = commits[1]
+    result = analyzer.analyze_commit(commit)
+
+    rails_change = result[:changes].find { |c| c[:name] == "rails" }
+    assert_nil rails_change[:integrity]
+  end
 end

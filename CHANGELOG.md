@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+- `git pkgs integrity` command to show and verify lockfile integrity hashes
+- `--drift` flag to detect packages with different hashes for the same version
+- Registry integrity comparison via ecosyste.ms API
+- Store integrity hashes from lockfiles in dependency_snapshots table (schema v4, run `git pkgs upgrade`)
+- Update ecosystems-bibliothecary to ~> 15.3 (integrity extraction from lockfiles)
+- Update purl to >= 1.7.1 (ecosyste.ms API URL support)
+
 ## [0.8.0] - 2026-01-14
 
 - `git pkgs outdated` command to find dependencies with newer versions available in registries

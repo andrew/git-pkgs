@@ -322,6 +322,19 @@ Output formats: `text` (default), `json`, and `sarif`. SARIF integrates with Git
 
 Vulnerability data is cached locally and refreshed automatically when stale (>24h). Use `git pkgs vulns sync --refresh` to force an update. See [docs/vulns.md](docs/vulns.md) for full documentation.
 
+### Integrity verification
+
+Show SHA256 hashes from lockfiles. Modern lockfiles include checksums that verify package contents haven't been tampered with.
+
+```bash
+git pkgs integrity              # show hashes for current dependencies
+git pkgs integrity --drift      # detect same version with different hashes
+git pkgs integrity -f json      # JSON output
+git pkgs integrity --stateless  # no database needed
+```
+
+The `--drift` flag scans your history for packages where the same version has different integrity hashes, which could indicate a supply chain issue.
+
 ### Diff between commits
 
 ```bash

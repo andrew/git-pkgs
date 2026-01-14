@@ -15,7 +15,7 @@ module Git
   module Pkgs
     class Database
       DB_FILE = "pkgs.sqlite3"
-      SCHEMA_VERSION = 3
+      SCHEMA_VERSION = 4
 
       class << self
         attr_accessor :db
@@ -179,6 +179,7 @@ module Git
           String :purl
           String :requirement
           String :dependency_type
+          String :integrity, text: true
           DateTime :created_at
           DateTime :updated_at
         end
@@ -291,21 +292,12 @@ module Git
       def self.check_version!
         return unless needs_upgrade?
 
-        migrate!
-      end
-
-      def self.migrate!
         stored = stored_version || 0
-
-        # Migration from v1 to v2: add vuln tables
-        if stored < 2
-          migrate_to_v2!
-        end
-
-        set_version
-        refresh_models
+        raise SchemaVersionError, "Database schema is v#{stored}, expected v#{SCHEMA_VERSION}. Run 'git pkgs upgrade' to rebuild."
       end
 
+      # Legacy migration kept for reference, no longer used.
+      # All schema changes now require full rebuild via 'git pkgs upgrade'.
       def self.migrate_to_v2!
         @db.create_table?(:packages) do
           primary_key :id

@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+## [0.8.0] - 2026-01-14
+
+- `git pkgs outdated` command to find dependencies with newer versions available in registries
+- `git pkgs licenses` command to check dependency licenses with compliance options (--permissive, --allow, --deny)
+- ecosyste.ms client for fetching package metadata (latest versions, licenses)
+- Package and Version models for storing enrichment data
+- Spinner utility for progress feedback during network operations
+- PURL helper for standardized package URLs
+- `outdated` is no longer an alias for `stale` (now a separate command)
+
 ## [0.7.0] - 2026-01-09
 
 - `git pkgs vulns` subcommand for vulnerability scanning via OSV API

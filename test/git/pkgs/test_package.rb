@@ -230,7 +230,8 @@ class Git::Pkgs::TestPackage < Minitest::Test
       "normalized_licenses" => ["MIT"],
       "description" => "Lodash modular utilities",
       "homepage" => "https://lodash.com/",
-      "repository_url" => "https://github.com/lodash/lodash"
+      "repository_url" => "https://github.com/lodash/lodash",
+      "owner_record" => { "name" => "lodash", "kind" => "organization" }
     }
 
     pkg.enrich_from_api(api_data)
@@ -241,7 +242,78 @@ class Git::Pkgs::TestPackage < Minitest::Test
     assert_equal "Lodash modular utilities", pkg.description
     assert_equal "https://lodash.com/", pkg.homepage
     assert_equal "https://github.com/lodash/lodash", pkg.repository_url
+    assert_equal "lodash", pkg.supplier_name
+    assert_equal "organization", pkg.supplier_type
     refute_nil pkg.enriched_at
+  end
+
+  def test_extract_supplier_from_owner_record
+    pkg = Git::Pkgs::Models::Package.create(
+      purl: "pkg:npm/lodash",
+      ecosystem: "npm",
+      name: "lodash"
+    )
+
+    data = { "owner_record" => { "name" => "lodash", "kind" => "organization" } }
+    name, type = pkg.extract_supplier(data)
+
+    assert_equal "lodash", name
+    assert_equal "organization", type
+  end
+
+  def test_extract_supplier_from_person_owner
+    pkg = Git::Pkgs::Models::Package.create(
+      purl: "pkg:npm/express",
+      ecosystem: "npm",
+      name: "express"
+    )
+
+    data = { "owner_record" => { "name" => "TJ Holowaychuk", "kind" => "user" } }
+    name, type = pkg.extract_supplier(data)
+
+    assert_equal "TJ Holowaychuk", name
+    assert_equal "person", type
+  end
+
+  def test_extract_supplier_from_maintainers
+    pkg = Git::Pkgs::Models::Package.create(
+      purl: "pkg:npm/test",
+      ecosystem: "npm",
+      name: "test"
+    )
+
+    data = { "maintainers" => [{ "name" => "John Doe", "login" => "johnd" }] }
+    name, type = pkg.extract_supplier(data)
+
+    assert_equal "John Doe", name
+    assert_equal "person", type
+  end
+
+  def test_extract_supplier_falls_back_to_login
+    pkg = Git::Pkgs::Models::Package.create(
+      purl: "pkg:npm/test",
+      ecosystem: "npm",
+      name: "test"
+    )
+
+    data = { "maintainers" => [{ "login" => "johnd" }] }
+    name, type = pkg.extract_supplier(data)
+
+    assert_equal "johnd", name
+    assert_equal "person", type
+  end
+
+  def test_extract_supplier_returns_nil_when_no_data
+    pkg = Git::Pkgs::Models::Package.create(
+      purl: "pkg:npm/test",
+      ecosystem: "npm",
+      name: "test"
+    )
+
+    name, type = pkg.extract_supplier({})
+
+    assert_nil name
+    assert_nil type
   end
 
   def test_needs_enrichment_scope

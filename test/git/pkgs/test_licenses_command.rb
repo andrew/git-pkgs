@@ -104,6 +104,11 @@ class Git::Pkgs::TestLicensesCommand < Minitest::Test
         headers: { "Content-Type" => "application/json" }
       )
 
+    stub_request(:get, "https://packages.ecosyste.ms/api/v1/registries/npmjs.org/packages/lodash/versions/4.17.21")
+      .to_return(status: 404)
+    stub_request(:get, "https://packages.ecosyste.ms/api/v1/registries/npmjs.org/packages/express/versions/4.18.0")
+      .to_return(status: 404)
+
     output = Dir.chdir(@test_dir) do
       capture_io do
         Git::Pkgs::Commands::Licenses.new(["--stateless"]).run
@@ -135,6 +140,8 @@ class Git::Pkgs::TestLicensesCommand < Minitest::Test
         body: [{ "purl" => "pkg:npm/lodash", "normalized_licenses" => ["MIT"] }].to_json,
         headers: { "Content-Type" => "application/json" }
       )
+    stub_request(:get, "https://packages.ecosyste.ms/api/v1/registries/npmjs.org/packages/lodash/versions/4.17.21")
+      .to_return(status: 404)
 
     output = Dir.chdir(@test_dir) do
       capture_io do
@@ -168,6 +175,8 @@ class Git::Pkgs::TestLicensesCommand < Minitest::Test
         body: [{ "purl" => "pkg:npm/lodash", "normalized_licenses" => ["MIT"] }].to_json,
         headers: { "Content-Type" => "application/json" }
       )
+    stub_request(:get, "https://packages.ecosyste.ms/api/v1/registries/npmjs.org/packages/lodash/versions/4.17.21")
+      .to_return(status: 404)
 
     output = Dir.chdir(@test_dir) do
       capture_io do
@@ -200,6 +209,8 @@ class Git::Pkgs::TestLicensesCommand < Minitest::Test
         body: [{ "purl" => "pkg:npm/gpl-package", "normalized_licenses" => ["GPL-3.0"] }].to_json,
         headers: { "Content-Type" => "application/json" }
       )
+    stub_request(:get, "https://packages.ecosyste.ms/api/v1/registries/npmjs.org/packages/gpl-package/versions/1.0.0")
+      .to_return(status: 404)
 
     assert_raises(SystemExit) do
       Dir.chdir(@test_dir) do
@@ -234,6 +245,12 @@ class Git::Pkgs::TestLicensesCommand < Minitest::Test
         ].to_json,
         headers: { "Content-Type" => "application/json" }
       )
+    stub_request(:get, "https://packages.ecosyste.ms/api/v1/registries/npmjs.org/packages/lodash/versions/4.17.21")
+      .to_return(status: 404)
+    stub_request(:get, "https://packages.ecosyste.ms/api/v1/registries/npmjs.org/packages/express/versions/4.18.0")
+      .to_return(status: 404)
+    stub_request(:get, "https://packages.ecosyste.ms/api/v1/registries/npmjs.org/packages/request/versions/2.88.0")
+      .to_return(status: 404)
 
     output = Dir.chdir(@test_dir) do
       capture_io do
@@ -244,5 +261,44 @@ class Git::Pkgs::TestLicensesCommand < Minitest::Test
     # Should show MIT (2) and Apache-2.0 (1) as groups
     assert_match(/MIT \(2\)/, output)
     assert_match(/Apache-2\.0 \(1\)/, output)
+  end
+
+  def test_licenses_version_level_takes_priority
+    add_file("package-lock.json", <<~JSON)
+      {
+        "name": "test-project",
+        "lockfileVersion": 2,
+        "packages": {
+          "node_modules/lodash": {
+            "version": "4.17.21"
+          }
+        }
+      }
+    JSON
+    commit("Add package-lock.json")
+
+    # Package-level says Apache-2.0, but version-level says MIT
+    stub_request(:post, "https://packages.ecosyste.ms/api/v1/packages/bulk_lookup")
+      .to_return(
+        status: 200,
+        body: [{ "purl" => "pkg:npm/lodash", "normalized_licenses" => ["Apache-2.0"] }].to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+    stub_request(:get, "https://packages.ecosyste.ms/api/v1/registries/npmjs.org/packages/lodash/versions/4.17.21")
+      .to_return(
+        status: 200,
+        body: { "licenses" => ["MIT"] }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    output = Dir.chdir(@test_dir) do
+      capture_io do
+        Git::Pkgs::Commands::Licenses.new(["--stateless"]).run
+      end.first
+    end
+
+    # Version-level MIT should take priority over package-level Apache-2.0
+    assert_match(/MIT/, output)
+    refute_match(/Apache/, output)
   end
 end

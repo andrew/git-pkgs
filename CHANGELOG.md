@@ -1,9 +1,17 @@
 ## [Unreleased]
 
+## [0.9.0] - 2026-01-14
+
+- `git pkgs sbom` command to export dependencies as SPDX or CycloneDX
 - `git pkgs integrity` command to show and verify lockfile integrity hashes
+- Parse go.sum for Go module integrity hashes (no longer ignored)
+- Convert Go h1: hashes (base64) to hex for SBOM compatibility
 - `--drift` flag to detect packages with different hashes for the same version
 - Registry integrity comparison via ecosyste.ms API
-- Store integrity hashes from lockfiles in dependency_snapshots table (schema v4, run `git pkgs upgrade`)
+- Store integrity hashes from lockfiles in dependency_snapshots table
+- SBOM export includes supplier info from ecosyste.ms (owner/maintainer)
+- License commands use version-level license data when available
+- Store supplier_name and supplier_type on packages (schema v5, run `git pkgs upgrade`)
 - Update ecosystems-bibliothecary to ~> 15.3 (integrity extraction from lockfiles)
 - Update purl to >= 1.7.1 (ecosyste.ms API URL support)
 

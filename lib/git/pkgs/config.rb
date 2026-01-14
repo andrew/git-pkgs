@@ -6,7 +6,7 @@ require "open3"
 module Git
   module Pkgs
     module Config
-      # File patterns ignored by default (SBOM formats not supported, go.sum is checksums only)
+      # File patterns ignored by default (SBOM formats duplicate info from actual lockfiles)
       DEFAULT_IGNORED_FILES = %w[
         cyclonedx.xml
         cyclonedx.json
@@ -14,7 +14,6 @@ module Git
         *.cdx.json
         *.spdx
         *.spdx.json
-        go.sum
       ].freeze
 
       def self.ignored_dirs

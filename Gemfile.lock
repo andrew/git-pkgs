@@ -7,11 +7,13 @@ GIT
 PATH
   remote: .
   specs:
-    git-pkgs (0.8.0)
+    git-pkgs (0.9.0)
+      base64
       ecosystems-bibliothecary (~> 15.3)
       purl (~> 1.7, >= 1.7.1)
       rugged (~> 1.0)
       sarif-ruby
+      sbom (~> 0.4)
       sequel (>= 5.0)
       sqlite3 (>= 2.0)
       vers (~> 1.0)
@@ -21,6 +23,7 @@ GEM
   specs:
     addressable (2.8.8)
       public_suffix (>= 2.0.2, < 8.0)
+    base64 (0.3.0)
     benchmark (0.5.0)
     bigdecimal (4.0.1)
     crack (1.0.1)
@@ -76,6 +79,10 @@ GEM
       io-console (~> 0.5)
     rexml (3.4.4)
     rugged (1.9.0)
+    sbom (0.4.1)
+      json_schemer (~> 2.0)
+      purl (~> 1.6)
+      rexml (~> 3.2)
     sequel (5.100.0)
       bigdecimal
     simplecov (0.22.0)
@@ -130,6 +137,7 @@ DEPENDENCIES
 
 CHECKSUMS
   addressable (2.8.8) sha256=7c13b8f9536cf6364c03b9d417c19986019e28f7c00ac8132da4eb0fe393b057
+  base64 (0.3.0) sha256=27337aeabad6ffae05c265c450490628ef3ebd4b67be58257393227588f5a97b
   benchmark (0.5.0) sha256=465df122341aedcb81a2a24b4d3bd19b6c67c1530713fd533f3ff034e419236c
   bigdecimal (4.0.1) sha256=8b07d3d065a9f921c80ceaea7c9d4ae596697295b584c296fe599dd0ad01c4a7
   crack (1.0.1) sha256=ff4a10390cd31d66440b7524eb1841874db86201d5b70032028553130b6d4c7e
@@ -138,7 +146,7 @@ CHECKSUMS
   docile (1.4.1) sha256=96159be799bfa73cdb721b840e9802126e4e03dfc26863db73647204c727f21e
   ecosystems-bibliothecary (15.3.0) sha256=dc3c8caa3218bf833beba9e3eb8cbeb35987f771532ff0eab87fbcdfb30ce4eb
   erb (6.0.1) sha256=28ecdd99c5472aebd5674d6061e3c6b0a45c049578b071e5a52c2a7f13c197e5
-  git-pkgs (0.8.0)
+  git-pkgs (0.9.0)
   hana (1.3.7) sha256=5425db42d651fea08859811c29d20446f16af196308162894db208cac5ce9b0d
   hashdiff (1.2.1) sha256=9c079dbc513dfc8833ab59c0c2d8f230fa28499cc5efb4b8dd276cf931457cd1
   io-console (0.8.2) sha256=d6e3ae7a7cc7574f4b8893b4fca2162e57a825b223a177b7afa236c5ef9814cc
@@ -162,6 +170,7 @@ CHECKSUMS
   rexml (3.4.4) sha256=19e0a2c3425dfbf2d4fc1189747bdb2f849b6c5e74180401b15734bc97b5d142
   rugged (1.9.0) sha256=7faaa912c5888d6e348d20fa31209b6409f1574346b1b80e309dbc7e8d63efac
   sarif-ruby (0.1.0)
+  sbom (0.4.1) sha256=0c0cb49c43048f53c7eacaa536064704747825f3ba6b607dfe481aab9c591f37
   sequel (5.100.0) sha256=cb0329b62287a01db68eead46759c14497a3fae01b174e2c41da108a9e9b4a12
   simplecov (0.22.0) sha256=fe2622c7834ff23b98066bb0a854284b2729a569ac659f82621fc22ef36213a5
   simplecov-html (0.13.2) sha256=bd0b8e54e7c2d7685927e8d6286466359b6f16b18cb0df47b508e8d73c777246

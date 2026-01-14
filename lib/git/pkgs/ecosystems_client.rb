@@ -60,7 +60,7 @@ module Git
         return nil unless url
 
         fetch_url(url)
-      rescue Purl::InvalidPurl
+      rescue Purl::Error
         nil
       end
 

@@ -118,9 +118,11 @@ module Git
           end
 
           packages = deps.map do |dep|
-            purl = PurlHelper.build_purl(ecosystem: dep[:ecosystem], name: dep[:name]).to_s
+            versioned_purl = PurlHelper.build_purl(ecosystem: dep[:ecosystem], name: dep[:name], version: dep[:requirement])
+            base_purl = PurlHelper.build_purl(ecosystem: dep[:ecosystem], name: dep[:name])
             {
-              purl: purl,
+              purl: versioned_purl.to_s,
+              base_purl: base_purl.to_s,
               name: dep[:name],
               ecosystem: dep[:ecosystem],
               version: dep[:requirement],
@@ -128,11 +130,9 @@ module Git
             }
           end.uniq { |p| p[:purl] }
 
-          enrich_packages(packages.map { |p| p[:purl] })
+          enrich_packages(packages)
 
           packages.each do |pkg|
-            db_pkg = Models::Package.first(purl: pkg[:purl])
-            pkg[:license] = db_pkg&.license
             pkg[:violation] = check_violation(pkg[:license])
           end
 
@@ -183,9 +183,14 @@ module Git
           license.downcase.include?(pattern.downcase)
         end
 
-        def enrich_packages(purls)
+        def enrich_packages(packages)
+          client = EcosystemsClient.new
+
+          # Enrich package-level data (license, latest version)
+          base_purls = packages.map { |p| p[:base_purl] }.uniq
+
           packages_by_purl = {}
-          purls.each do |purl|
+          base_purls.each do |purl|
             parsed = Purl::PackageURL.parse(purl)
             ecosystem = PurlHelper::ECOSYSTEM_TO_PURL_TYPE.invert[parsed.type] || parsed.type
             pkg = Models::Package.find_or_create_by_purl(
@@ -196,19 +201,52 @@ module Git
             packages_by_purl[purl] = pkg
           end
 
-          stale_purls = packages_by_purl.select { |_, pkg| pkg.needs_enrichment? }.keys
-          return if stale_purls.empty?
+          stale_pkg_purls = packages_by_purl.select { |_, pkg| pkg.needs_enrichment? }.keys
 
-          client = EcosystemsClient.new
-          begin
-            results = Spinner.with_spinner("Fetching package metadata...") do
-              client.bulk_lookup(stale_purls)
+          if stale_pkg_purls.any?
+            begin
+              results = Spinner.with_spinner("Fetching package metadata...") do
+                client.bulk_lookup(stale_pkg_purls)
+              end
+              results.each do |purl, data|
+                packages_by_purl[purl]&.enrich_from_api(data)
+              end
+            rescue EcosystemsClient::ApiError => e
+              $stderr.puts "Warning: Could not fetch package data: #{e.message}" unless Git::Pkgs.quiet
             end
-            results.each do |purl, data|
-              packages_by_purl[purl]&.enrich_from_api(data)
+          end
+
+          # Enrich version-level data (license, integrity, published_at)
+          versions_by_purl = {}
+          packages.each do |pkg|
+            version = Models::Version.find_or_create_by_purl(
+              purl: pkg[:purl],
+              package_purl: pkg[:base_purl]
+            )
+            versions_by_purl[pkg[:purl]] = version
+          end
+
+          stale_version_purls = versions_by_purl.select { |_, v| v.needs_enrichment? }.keys
+
+          if stale_version_purls.any?
+            begin
+              Spinner.with_spinner("Fetching version metadata...") do
+                stale_version_purls.each do |purl|
+                  data = client.lookup_version(purl)
+                  versions_by_purl[purl]&.enrich_from_api(data) if data
+                end
+              end
+            rescue EcosystemsClient::ApiError => e
+              $stderr.puts "Warning: Could not fetch version data: #{e.message}" unless Git::Pkgs.quiet
             end
-          rescue EcosystemsClient::ApiError => e
-            $stderr.puts "Warning: Could not fetch package data: #{e.message}" unless Git::Pkgs.quiet
+          end
+
+          # Apply enriched data to packages - version license takes priority
+          packages.each do |pkg|
+            db_pkg = packages_by_purl[pkg[:base_purl]]
+            db_version = versions_by_purl[pkg[:purl]]
+
+            pkg[:license] = db_version&.license || db_pkg&.license
           end
         end
 

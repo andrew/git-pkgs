@@ -38,4 +38,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency "vers", "~> 1.0"
   spec.add_dependency "purl", "~> 1.7", ">= 1.7.1"
   spec.add_dependency "sarif-ruby"
+  spec.add_dependency "sbom", "~> 0.4"
+  spec.add_dependency "base64"
 end

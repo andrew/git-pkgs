@@ -56,14 +56,37 @@ module Git
 
         # Update package with data from ecosyste.ms API
         def enrich_from_api(data)
+          supplier_name, supplier_type = extract_supplier(data)
+
           update(
             latest_version: data["latest_release_number"],
             license: (data["normalized_licenses"] || []).first,
             description: data["description"],
             homepage: data["homepage"],
             repository_url: data["repository_url"],
+            supplier_name: supplier_name,
+            supplier_type: supplier_type,
             enriched_at: Time.now
           )
+        end
+
+        # Extract supplier info from API response
+        # Prefers owner_record (org), falls back to first maintainer
+        def extract_supplier(data)
+          owner = data["owner_record"]
+          if owner && owner["name"]
+            type = owner["kind"] == "organization" ? "organization" : "person"
+            return [owner["name"], type]
+          end
+
+          maintainers = data["maintainers"]
+          if maintainers&.any?
+            first = maintainers.first
+            name = first["name"] || first["login"]
+            return [name, "person"] if name
+          end
+
+          [nil, nil]
         end
 
         def vulnerabilities

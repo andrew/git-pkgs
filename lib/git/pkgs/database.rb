@@ -15,7 +15,7 @@ module Git
   module Pkgs
     class Database
       DB_FILE = "pkgs.sqlite3"
-      SCHEMA_VERSION = 4
+      SCHEMA_VERSION = 5
 
       class << self
         attr_accessor :db
@@ -194,6 +194,8 @@ module Git
           String :description, text: true
           String :homepage
           String :repository_url
+          String :supplier_name
+          String :supplier_type
           String :source
           DateTime :enriched_at
           DateTime :vulns_synced_at

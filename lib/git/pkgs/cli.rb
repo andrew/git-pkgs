@@ -36,7 +36,8 @@ module Git
           "stale" => "Show dependencies that haven't been updated",
           "outdated" => "Show packages with newer versions available",
           "licenses" => "Show licenses for dependencies",
-          "integrity" => "Show and verify lockfile integrity hashes"
+          "integrity" => "Show and verify lockfile integrity hashes",
+          "sbom" => "Export dependencies as SBOM (SPDX or CycloneDX)"
         },
         "Security" => {
           "vulns" => "Scan for known vulnerabilities"

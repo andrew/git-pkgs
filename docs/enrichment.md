@@ -2,7 +2,7 @@
 
 Most git-pkgs commands work entirely from your git history. Your manifests and lockfiles tell us which packages you depend on, who added them, and when. But some questions require data that isn't in your repository: what's the latest version available? what license does this package use? has a security vulnerability been disclosed?
 
-The `outdated` and `licenses` commands fetch this external metadata from the [ecosyste.ms Packages API](https://packages.ecosyste.ms/), which aggregates data from npm, RubyGems, PyPI, and other registries. See also [vulns.md](vulns.md) for vulnerability scanning via OSV.
+The `outdated`, `licenses`, and `sbom` commands fetch this external metadata from the [ecosyste.ms Packages API](https://packages.ecosyste.ms/), which aggregates data from npm, RubyGems, PyPI, and other registries. See also [vulns.md](vulns.md) for vulnerability scanning via OSV.
 
 ## outdated
 
@@ -152,9 +152,68 @@ MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, Unlicense, CC0-1.0, 0BSD, WTFP
 Copyleft licenses (flagged with `--copyleft` or `--permissive`):
 GPL-2.0, GPL-3.0, LGPL-2.1, LGPL-3.0, AGPL-3.0, MPL-2.0 (and their variant identifiers)
 
+## sbom
+
+Export dependencies as a Software Bill of Materials (SBOM) in SPDX or CycloneDX format.
+
+```
+$ git pkgs sbom
+{
+  "spdxVersion": "SPDX-2.3",
+  "name": "my-project",
+  "packages": [
+    {
+      "name": "lodash",
+      "versionInfo": "4.17.21",
+      "licenseConcluded": "MIT",
+      "externalRefs": [
+        {
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/lodash@4.17.21"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Options
+
+```
+-t, --type=TYPE         SBOM type: cyclonedx (default) or spdx
+-f, --format=FORMAT     Output format: json (default) or xml
+-n, --name=NAME         Project name (default: repository directory name)
+-e, --ecosystem=NAME    Filter by ecosystem
+-r, --ref=REF           Git ref to export (default: HEAD)
+    --skip-enrichment   Skip fetching license data from registries
+    --stateless         Parse manifests directly without database
+```
+
+### Examples
+
+CycloneDX format:
+
+```
+$ git pkgs sbom --type cyclonedx
+```
+
+XML output:
+
+```
+$ git pkgs sbom -f xml
+```
+
+Skip license enrichment for faster output:
+
+```
+$ git pkgs sbom --skip-enrichment
+```
+
+The SBOM includes package URLs (purls), versions, licenses (from registry lookup), and integrity hashes (from lockfiles when available).
+
 ## Data Source
 
-Both commands fetch package metadata from [ecosyste.ms](https://packages.ecosyste.ms/), which aggregates data from npm, RubyGems, PyPI, Cargo, and other package registries.
+These commands fetch package metadata from [ecosyste.ms](https://packages.ecosyste.ms/), which aggregates data from npm, RubyGems, PyPI, Cargo, and other package registries.
 
 ## Caching
 
@@ -169,11 +228,12 @@ The cache stores:
 
 ## Stateless Mode
 
-Both commands support `--stateless` mode, which parses manifest files directly from git without requiring a database. This is useful in CI environments where you don't want to run `git pkgs init` first.
+All three commands support `--stateless` mode, which parses manifest files directly from git without requiring a database. This is useful in CI environments where you don't want to run `git pkgs init` first.
 
 ```
 $ git pkgs outdated --stateless
 $ git pkgs licenses --stateless --permissive
+$ git pkgs sbom --stateless
 ```
 
 In stateless mode, package metadata is fetched fresh each time and cached only in memory for the duration of the command.

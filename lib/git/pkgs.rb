@@ -50,6 +50,7 @@ require_relative "pkgs/commands/vulns"
 require_relative "pkgs/commands/outdated"
 require_relative "pkgs/commands/licenses"
 require_relative "pkgs/commands/integrity"
+require_relative "pkgs/commands/sbom"
 
 module Git
   module Pkgs

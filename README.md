@@ -335,6 +335,20 @@ git pkgs integrity --stateless  # no database needed
 
 The `--drift` flag scans your history for packages where the same version has different integrity hashes, which could indicate a supply chain issue.
 
+### SBOM export
+
+Export dependencies as a Software Bill of Materials in CycloneDX or SPDX format:
+
+```bash
+git pkgs sbom                      # CycloneDX JSON (default)
+git pkgs sbom --type spdx          # SPDX JSON
+git pkgs sbom -f xml               # XML instead of JSON
+git pkgs sbom --name my-project    # custom project name
+git pkgs sbom --stateless          # no database needed
+```
+
+Includes package URLs (purls), versions, and licenses (fetched from registries). Use `--skip-enrichment` to omit license lookups.
+
 ### Diff between commits
 
 ```bash

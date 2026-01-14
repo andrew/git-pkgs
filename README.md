@@ -10,7 +10,9 @@ Your lockfile shows what dependencies you have, but it doesn't show how you got 
 
 For best results, commit your lockfiles. Manifests show version ranges but lockfiles show what actually got installed, including transitive dependencies.
 
-It works across many ecosystems (Gemfile, package.json, Dockerfile, GitHub Actions workflows) giving you one unified history instead of separate tools per ecosystem. Everything runs locally and offline with no external services or network calls, and the database lives in your `.git` directory where you can use it in CI to catch dependency changes in pull requests.
+It works across many ecosystems (Gemfile, package.json, Dockerfile, GitHub Actions workflows) giving you one unified history instead of separate tools per ecosystem. The database lives in your `.git` directory where you can use it in CI to catch dependency changes in pull requests.
+
+The core commands (`list`, `history`, `blame`, `diff`, `stale`, etc.) work entirely from your git history with no network access. Additional commands fetch external data: `vulns` checks [OSV](https://osv.dev) for known CVEs, while `outdated` and `licenses` query [ecosyste.ms](https://packages.ecosyste.ms/) for registry metadata. See [docs/enrichment.md](docs/enrichment.md) for details on external data.
 
 ## Installation
 
@@ -256,10 +258,32 @@ This shows dependencies grouped by type (runtime, development, etc).
 git pkgs stale                  # list deps by how long since last touched
 git pkgs stale --days=365       # only show deps untouched for a year
 git pkgs stale --ecosystem=npm  # filter by ecosystem
-git pkgs outdated               # alias for stale
 ```
 
 Shows dependencies sorted by how long since they were last changed in your repo. Useful for finding packages that may have been forgotten or need review.
+
+### Find outdated dependencies
+
+```bash
+git pkgs outdated               # show packages with newer versions available
+git pkgs outdated --major       # only major version updates
+git pkgs outdated --minor       # minor and major updates (skip patch)
+git pkgs outdated --stateless   # no database needed
+```
+
+Checks package registries (via [ecosyste.ms](https://packages.ecosyste.ms/)) to find dependencies with newer versions available. Major updates are shown in red, minor in yellow, patch in cyan.
+
+### Check licenses
+
+```bash
+git pkgs licenses               # show license for each dependency
+git pkgs licenses --permissive  # flag copyleft licenses
+git pkgs licenses --allow=MIT,Apache-2.0  # explicit allow list
+git pkgs licenses --group       # group output by license
+git pkgs licenses --stateless   # no database needed
+```
+
+Fetches license information from package registries. Exits with code 1 if violations are found, making it suitable for CI. See [docs/enrichment.md](docs/enrichment.md) for all options.
 
 ### Vulnerability scanning
 

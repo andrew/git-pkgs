@@ -1,6 +1,8 @@
 # Package Enrichment
 
-git-pkgs can fetch additional metadata about your dependencies from the [ecosyste.ms Packages API](https://packages.ecosyste.ms/). This powers the `outdated` and `licenses` commands.
+Most git-pkgs commands work entirely from your git history. Your manifests and lockfiles tell us which packages you depend on, who added them, and when. But some questions require data that isn't in your repository: what's the latest version available? what license does this package use? has a security vulnerability been disclosed?
+
+The `outdated` and `licenses` commands fetch this external metadata from the [ecosyste.ms Packages API](https://packages.ecosyste.ms/), which aggregates data from npm, RubyGems, PyPI, and other registries. See also [vulns.md](vulns.md) for vulnerability scanning via OSV.
 
 ## outdated
 

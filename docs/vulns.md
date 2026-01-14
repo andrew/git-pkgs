@@ -1,6 +1,8 @@
 # Vulnerability Scanning
 
-git-pkgs can scan your dependencies for known vulnerabilities using the OSV (Open Source Vulnerabilities) database. Because git-pkgs already tracks the full history of every dependency change, it can provide context that static scanners can't: who introduced a vulnerability, when, and why.
+git-pkgs can scan your dependencies for known vulnerabilities using the [OSV](https://osv.dev) database. This is one of the commands that fetches external data (see also `outdated` and `licenses` in [enrichment.md](enrichment.md)).
+
+Because git-pkgs already tracks the full history of every dependency change, it can provide context that static scanners can't: who introduced a vulnerability, when, and why.
 
 ## Basic Usage
 

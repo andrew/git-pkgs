@@ -2,6 +2,8 @@
 
 git-pkgs walks a repository's commit history, parses manifest files at each commit, and stores dependency changes in a SQLite database. This lets you query what changed, when, and who did it.
 
+The tool works with two types of data. Intrinsic data comes from your git history: dependency names, versions from manifests, who added them, when, and why. Commands like `list`, `history`, `blame`, `diff`, and `stale` use only intrinsic data and require no network access. Extrinsic data comes from external sources: vulnerability info from [OSV](https://osv.dev), and registry metadata (latest versions, licenses) from [ecosyste.ms](https://packages.ecosyste.ms/). Commands like `vulns`, `outdated`, and `licenses` fetch and cache this external data.
+
 ## Entry Point
 
 The executable at [`exe/git-pkgs`](../exe/git-pkgs) loads [`lib/git/pkgs.rb`](../lib/git/pkgs.rb) and calls `Git::Pkgs::CLI.run`. The [CLI class](../lib/git/pkgs/cli.rb) parses the first argument as a command name and dispatches to the corresponding class in [`lib/git/pkgs/commands/`](../lib/git/pkgs/commands/). Each command handles its own option parsing with [OptionParser](https://docs.ruby-lang.org/en/master/OptionParser.html).

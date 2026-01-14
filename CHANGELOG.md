@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- Auto-upgrade outdated database schemas instead of erroring
+
 ## [0.9.0] - 2026-01-14
 
 - `git pkgs sbom` command to export dependencies as SPDX or CycloneDX

@@ -295,7 +295,10 @@ module Git
         return unless needs_upgrade?
 
         stored = stored_version || 0
-        raise SchemaVersionError, "Database schema is v#{stored}, expected v#{SCHEMA_VERSION}. Run 'git pkgs upgrade' to rebuild."
+        puts "Upgrading database schema v#{stored} → v#{SCHEMA_VERSION}..." unless Git::Pkgs.quiet
+
+        disconnect
+        Commands::Init.new(["--force"]).run
       end
 
       # Legacy migration kept for reference, no longer used.

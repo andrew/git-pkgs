@@ -75,17 +75,21 @@ class Git::Pkgs::TestDatabase < Minitest::Test
     refute Git::Pkgs::Database.needs_upgrade?
   end
 
-  def test_check_version_raises_for_old_schema
+  def test_check_version_auto_upgrades_old_schema
     Git::Pkgs::Database.connect(@git_dir, check_version: false)
     Git::Pkgs::Database.create_schema
     Git::Pkgs::Database.set_version(1)
 
     assert Git::Pkgs::Database.needs_upgrade?
-    error = assert_raises(Git::Pkgs::SchemaVersionError) do
+
+    Dir.chdir(@test_dir) do
+      Git::Pkgs.quiet = true
       Git::Pkgs::Database.check_version!
+      Git::Pkgs.quiet = false
     end
-    assert_match(/v1.*v#{Git::Pkgs::Database::SCHEMA_VERSION}/, error.message)
-    assert_match(/git pkgs upgrade/, error.message)
+
+    assert_equal Git::Pkgs::Database::SCHEMA_VERSION, Git::Pkgs::Database.stored_version
+    refute Git::Pkgs::Database.needs_upgrade?
   end
 
   def test_create_schema_creates_vuln_tables

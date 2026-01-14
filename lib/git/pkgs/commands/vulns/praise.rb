@@ -68,6 +68,8 @@ module Git
             error "No analysis found for branch '#{branch_name}'. Run 'git pkgs init' first."
           end
 
+          ensure_vulns_synced
+
           # Get all unique packages from dependency changes
           packages = Models::DependencyChange
             .select(:ecosystem, :name)

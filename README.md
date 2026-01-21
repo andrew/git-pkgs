@@ -1,5 +1,7 @@
 # git-pkgs
 
+> **Note:** This project has been rewritten in Go. See [github.com/git-pkgs/git-pkgs](https://github.com/git-pkgs/git-pkgs) for the actively maintained version.
+
 A git subcommand for tracking package dependencies across git history. Analyzes your repository to show when dependencies were added, modified, or removed, who made those changes, and why.
 
 [Installation](#installation) · [Quick start](#quick-start) · [Commands](#commands) · [Configuration](#configuration) · [Ruby API](#ruby-api) · [Contributing](#contributing)
